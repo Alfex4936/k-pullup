@@ -24,12 +24,14 @@ const (
 )
 
 type MarkerInteractService struct {
-	DB *sqlx.DB
+	DB           *sqlx.DB
+	CacheService *MarkerCacheService
 }
 
-func NewMarkerInteractService(db *sqlx.DB) *MarkerInteractService {
+func NewMarkerInteractService(db *sqlx.DB, cache *MarkerCacheService) *MarkerInteractService {
 	return &MarkerInteractService{
-		DB: db,
+		DB:           db,
+		CacheService: cache,
 	}
 }
 

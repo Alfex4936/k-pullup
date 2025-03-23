@@ -355,8 +355,8 @@ func (s *UserService) GetAllReportsForMyMarkersByUser(userID int) (dto.GroupedRe
 	return response, nil
 }
 
-func (s *UserService) GetAllFavorites(userID int) ([]dto.MarkerSimpleWithDescrption, error) {
-	favorites := make([]dto.MarkerSimpleWithDescrption, 0)
+func (s *UserService) GetAllFavorites(userID int) ([]dto.MarkerSimpleWithDescription, error) {
+	favorites := make([]dto.MarkerSimpleWithDescription, 0)
 
 	err := s.DB.Select(&favorites, getAllFavQuery, userID)
 	if err != nil {

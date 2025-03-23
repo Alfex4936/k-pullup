@@ -39,7 +39,21 @@ func RegisterCommentRoutes(api fiber.Router, handler *CommentHandler, authMiddle
 	}
 }
 
-// postCommentHandler creates a new comment
+// HandlePostComment creates a new comment on a marker.
+//
+// @Summary Post a comment
+// @Description Allows an authenticated user to post a comment on a marker. Each user can post up to 3 comments per marker.
+// @ID post-comment
+// @Tags comments
+// @Accept json
+// @Produce json
+// @Param request body dto.CommentRequest true "Comment request containing marker ID and comment text"
+// @Security ApiKeyAuth
+// @Success 200 {object} dto.CommentWithUsername "Comment created successfully"
+// @Failure 400 {object} map[string]string "Invalid request body or maximum comments reached"
+// @Failure 404 {object} map[string]string "Marker not found"
+// @Failure 500 {object} map[string]string "Failed to create comment"
+// @Router /api/v1/comments [post]
 func (h *CommentHandler) HandlePostComment(c *fiber.Ctx) error {
 	userID := c.Locals("userID").(int)
 	userName := c.Locals("username").(string)
@@ -69,6 +83,22 @@ func (h *CommentHandler) HandlePostComment(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(comment)
 }
 
+// HandleUpdateComment updates a comment made by the authenticated user.
+//
+// @Summary Update a comment
+// @Description Allows an authenticated user to update their own comment.
+// @ID update-comment
+// @Tags comments
+// @Accept json
+// @Produce json
+// @Param commentId path int true "Comment ID"
+// @Param request body map[string]string true "Updated comment text" example: {"commentText": "Updated comment content"}
+// @Security ApiKeyAuth
+// @Success 200 {object} map[string]string "Comment updated successfully"
+// @Failure 400 {object} map[string]string "Invalid comment ID or request body"
+// @Failure 404 {object} map[string]string "Comment not found or not owned by user"
+// @Failure 500 {object} map[string]string "Failed to update the comment"
+// @Router /api/v1/comments/{commentId} [patch]
 func (h *CommentHandler) HandleUpdateComment(c *fiber.Ctx) error {
 	commentID, err := strconv.Atoi(c.Params("commentId"))
 	if err != nil {
@@ -96,6 +126,21 @@ func (h *CommentHandler) HandleUpdateComment(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Comment updated successfully"})
 }
 
+// HandleRemoveComment deletes a comment made by the authenticated user.
+//
+// @Summary Delete a comment
+// @Description Allows an authenticated user to delete their own comment.
+// @ID delete-comment
+// @Tags comments
+// @Accept json
+// @Produce json
+// @Param commentId path int true "Comment ID"
+// @Security ApiKeyAuth
+// @Success 200 {object} map[string]string "Comment removed successfully"
+// @Failure 400 {object} map[string]string "Invalid comment ID"
+// @Failure 404 {object} map[string]string "Comment not found or already deleted"
+// @Failure 500 {object} map[string]string "Failed to remove comment"
+// @Router /api/v1/comments/{commentId} [delete]
 func (h *CommentHandler) HandleRemoveComment(c *fiber.Ctx) error {
 	commentID, err := strconv.Atoi(c.Params("commentId"))
 	if err != nil {
@@ -115,10 +160,31 @@ func (h *CommentHandler) HandleRemoveComment(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Comment removed successfully"})
 }
 
+// HandleLoadComments retrieves paginated comments for a specific marker.
+//
+// @Summary Get comments for a marker
+// @Description Fetches a paginated list of comments for a specific marker.
+// @ID get-marker-comments
+// @Tags comments, pagination
+// @Accept json
+// @Produce json
+// @Param markerId path int true "Marker ID"
+// @Param page query int false "Page number (default: 1)"
+// @Param pageSize query int false "Number of comments per page (default: 4)"
+// @Security
+// @Success 200 {object} map[string]interface{} "Paginated list of comments"
+// @Failure 400 {object} map[string]string "Invalid marker ID or pagination parameters"
+// @Failure 500 {object} map[string]string "Failed to retrieve comments"
+// @Router /api/v1/comments/{markerId}/comments [get]
 func (h *CommentHandler) HandleLoadComments(c *fiber.Ctx) error {
-	var params dto.CommentLoadParams
-	if err := c.QueryParser(&params); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid query parameters"})
+	pagination, err := util.ParsePaginationParams(c, &util.PaginationConfig{
+		DefaultPage:       1,
+		DefaultPageSize:   4,
+		PageParamName:     "page",
+		PageSizeParamName: "pageSize",
+	})
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid pagination parameters"})
 	}
 
 	markerID, err := c.ParamsInt("markerId")
@@ -128,34 +194,20 @@ func (h *CommentHandler) HandleLoadComments(c *fiber.Ctx) error {
 		})
 	}
 
-	// default
-	if params.N < 1 {
-		params.N = 4
-	}
-	if params.Page < 1 {
-		params.Page = 1
-	}
-
-	pageSize := 4 // Define page size
-	offset := (params.Page - 1) * pageSize
-
 	// Call service function to load comments for the marker
-	comments, total, err := h.CommentService.LoadCommentsForMarker(markerID, pageSize, offset)
+	comments, total, err := h.CommentService.LoadCommentsForMarker(markerID, pagination.PageSize, pagination.Offset)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": err.Error(),
-		})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	// Calculate total pages
-	totalPages := total / pageSize
-	if total%pageSize != 0 {
+	totalPages := total / pagination.PageSize
+	if total%pagination.PageSize != 0 {
 		totalPages++
 	}
 
 	return c.JSON(fiber.Map{
 		"comments":      comments,
-		"currentPage":   params.Page,
+		"currentPage":   pagination.Page,
 		"totalPages":    totalPages,
 		"totalComments": total,
 	})

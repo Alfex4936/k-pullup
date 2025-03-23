@@ -50,7 +50,7 @@ func (s *RedisService) SetCacheEntry(key string, value interface{}, expiration t
 	}
 
 	ctx := context.Background()
-	setCmd := s.Core.Client.B().Set().Key(key).Value(rueidis.BinaryString(jsonValue)).Nx().Ex(expiration).Build()
+	setCmd := s.Core.Client.B().Set().Key(key).Value(rueidis.BinaryString(jsonValue)).Ex(expiration).Build()
 	return s.Core.Client.Do(ctx, setCmd).Error()
 }
 

@@ -121,6 +121,19 @@ ORDER BY
     M.CreatedAt DESC
 LIMIT ? OFFSET ?`
 
+	getOneMarkerByMarkerIdQuery = `
+	SELECT 
+		M.MarkerID,
+		ST_X(M.Location) AS Latitude, 
+		ST_Y(M.Location) AS Longitude, 
+		M.Description,
+		M.CreatedAt,
+		M.Address
+	FROM 
+		Markers M
+	WHERE 
+		M.MarkerID = ?`
+
 	// Query to get the total count of markers for the user
 	getTotalCountofMarkerQuery = "SELECT COUNT(DISTINCT Markers.MarkerID) FROM Markers WHERE Markers.UserID = ?"
 
@@ -377,10 +390,10 @@ func (s *MarkerManageService) GetAllMarkersWithAddr() ([]dto.MarkerSimpleWithAdd
 	return filteredMarkers, nil
 }
 
-func (s *MarkerManageService) GetAllMarkersByUserWithPagination(userID, page, pageSize int) ([]dto.MarkerSimpleWithDescrption, int, error) {
+func (s *MarkerManageService) GetAllMarkersByUserWithPagination(userID, page, pageSize int) ([]dto.MarkerSimpleWithDescription, int, error) {
 	offset := (page - 1) * pageSize
 
-	markersWithDescription := make([]dto.MarkerSimpleWithDescrption, 0)
+	markersWithDescription := make([]dto.MarkerSimpleWithDescription, 0)
 	err := s.DB.Select(&markersWithDescription, getMarkersByUserQuery, userID, pageSize, offset)
 	if err != nil {
 		return nil, 0, err
@@ -393,6 +406,17 @@ func (s *MarkerManageService) GetAllMarkersByUserWithPagination(userID, page, pa
 	}
 
 	return markersWithDescription, total, nil
+}
+
+func (s *MarkerManageService) GetMarkerSimpleWithDescription(markerID int) (dto.MarkerSimpleWithDescription, error) {
+
+	var markerWithDescription dto.MarkerSimpleWithDescription
+	err := s.DB.Get(&markerWithDescription, getOneMarkerByMarkerIdQuery, markerID)
+	if err != nil {
+		return markerWithDescription, err
+	}
+
+	return markerWithDescription, nil
 }
 
 func (s *MarkerManageService) CheckMarkerValidity(latitude, longitude float64, description string) *fiber.Error {

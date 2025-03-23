@@ -69,7 +69,23 @@ func RegisterChatRoutes(api fiber.Router, websocketConfig websocket.Config, hand
 	}, websocketConfig))
 }
 
-// HandleChatRoomHandler manages chat rooms and messaging
+// HandleChatRoomHandler manages WebSocket chat connections for markers.
+//
+// @Summary WebSocket chat connection
+// @Description Establishes a WebSocket connection for a specific marker chat room.
+// @ID ws-chat-room
+// @Tags chats
+// @Accept json
+// @Produce json
+// @Security
+// @Param markerID path string true "Marker ID for the chat room"
+// @Param request-id query string false "Unique client request ID"
+// @Success 101 "Switching Protocols - WebSocket connection established"
+// @Failure 400 {object} map[string]string "Invalid marker ID"
+// @Failure 403 {object} map[string]interface{} "User is banned from the chat room"
+// @Failure 426 {object} map[string]string "Upgrade required to WebSocket"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/ws/{markerID} [get]
 func (h *ChatHandler) HandleChatRoom(c *websocket.Conn, markerID, reqID string) {
 	// clientID := c.Locals("userID").(int)
 	// clientNickname := c.Locals("username").(string)

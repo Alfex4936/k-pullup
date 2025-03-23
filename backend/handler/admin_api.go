@@ -8,7 +8,6 @@ import (
 	"image/jpeg"
 	"image/png"
 	"mime/multipart"
-	"net/http"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -20,6 +19,7 @@ import (
 	"github.com/Alfex4936/chulbong-kr/service"
 	"github.com/Alfex4936/chulbong-kr/util"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"go.uber.org/zap"
 
 	"github.com/chai2010/webp"
@@ -30,9 +30,9 @@ type AdminHandler struct {
 	UserFacadeService *facade.UserFacadeService
 	UserService       *service.UserService
 
-	TokenUtil  *util.TokenUtil
-	Logger     *zap.Logger
-	HTTPClient *http.Client
+	TokenUtil *util.TokenUtil
+	Logger    *zap.Logger
+	ChatUtil  *util.ChatUtil
 }
 
 // NewAdminHandler creates a new AdminHandler with dependencies injected
@@ -42,7 +42,7 @@ func NewAdminHandler(
 	user *service.UserService,
 	tutil *util.TokenUtil,
 	logger *zap.Logger,
-	httpClient *http.Client,
+	chatUtil *util.ChatUtil,
 ) *AdminHandler {
 	return &AdminHandler{
 		AdminFacade:       admin,
@@ -50,6 +50,7 @@ func NewAdminHandler(
 		UserService:       user,
 		TokenUtil:         tutil,
 		Logger:            logger,
+		ChatUtil:          chatUtil,
 	}
 }
 
@@ -61,10 +62,24 @@ func RegisterAdminRoutes(api fiber.Router, handler *AdminHandler, authMiddleware
 	api.Get("/admin/blur-decode", handler.HandleDecodeBlurImage)
 
 	api.Get("/notices", handler.HandleListNotices)
+	api.Get("/admin/openapi", authMiddleware.CheckAdmin, handler.HandleHTMLReportAdmin)
 
 	// Mimic Next.js image optimization URL:
 	// e.g. /next/image?url=<encoded-image-url>&w=3840&q=75
-	api.Get("/next/image", handler.HandleNextImage)
+	api.Get("/next/image", limiter.New(limiter.Config{
+		KeyGenerator: func(c *fiber.Ctx) string {
+			return "image-" + handler.ChatUtil.GetUserIP(c)
+		},
+		Max:               75,
+		Expiration:        1 * time.Minute,
+		LimiterMiddleware: limiter.SlidingWindow{},
+		LimitReached: func(c *fiber.Ctx) error {
+			c.Set(fiber.HeaderContentType, fiber.MIMETextPlainCharsetUTF8)
+			c.Status(429).SendString("Too many requests, please try again later.")
+			return nil
+		},
+		SkipFailedRequests: false,
+	}), handler.HandleNextImage)
 
 	adminGroup := api.Group("/admin")
 	{
@@ -516,4 +531,8 @@ func (h *AdminHandler) HandleNextImage(c *fiber.Ctx) error {
 
 	c.Set(fiber.HeaderContentType, contentType)
 	return c.Send(resultBytes)
+}
+
+func (h *AdminHandler) HandleHTMLReportAdmin(c *fiber.Ctx) error {
+	return c.Render("swagger", fiber.Map{})
 }

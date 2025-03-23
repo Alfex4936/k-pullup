@@ -477,7 +477,7 @@ func NewWsConfig() websocket.Config {
 		HandshakeTimeout: 5 * time.Second,
 
 		// TODO: PRODUCTION
-		Origins: []string{"https://test.k-pullup.com", "https://www.k-pullup.com"},
+		Origins: []string{"https://test.k-pullup.com", "https://www.k-pullup.com", "https://m.k-pullup.com", "https://local.k-pullup.com:5173"},
 
 		EnableCompression: true,
 
@@ -526,6 +526,23 @@ func NewRegistry() prometheus.Registerer {
 	reg := prometheus.NewRegistry()
 	reg.MustRegister(collectors.NewGoCollector())
 	reg.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+
+	// No need to create a new registry, just use the default one
+	requestDurationHistogram := prometheus.NewHistogram(prometheus.HistogramOpts{
+		Name:    "http_request_duration_seconds",
+		Help:    "Histogram for HTTP request durations.",
+		Buckets: prometheus.ExponentialBuckets(0.1, 2, 10), // Use optimized buckets
+	})
+
+	// Register only if not already registered
+	if err := prometheus.DefaultRegisterer.Register(requestDurationHistogram); err != nil {
+		if existing, ok := err.(prometheus.AlreadyRegisteredError); ok {
+			requestDurationHistogram = existing.ExistingCollector.(prometheus.Histogram)
+		} else {
+			panic(err) // Real error, not just a duplicate metric
+		}
+	}
+
 	return reg
 }
 
@@ -540,6 +557,14 @@ func NewLoginCounter(registry prometheus.Registerer) prometheus.Counter {
 }
 
 // MAIN Fx
+// @title k-pullup API
+// @description This is the API documentation for the k-pullup service.
+// @version 1.0
+// @license MIT
+// @license.url https://raw.githubusercontent.com/Alfex4936/chulbong-kr/refs/heads/main/LICENSE
+// @contact.name API Support
+// @contact.email chulbong.kr@gmail.com
+// @contact.url https://github.com/Alfex4936
 func main() {
 	viper.AutomaticEnv() // Automatically read from environment variables
 	if viper.GetString("DEPLOYMENT") != "production" {

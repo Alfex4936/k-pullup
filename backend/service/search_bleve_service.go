@@ -175,6 +175,8 @@ func (s *BleveSearchService) SearchMarkerAddress(t string) (dto.MarkerSearchResp
 		t = dkssud.QwertyToHangul(t)
 	}
 
+	// s.Logger.Info("Searching...", zap.String("query", t))
+
 	response := dto.MarkerSearchResponse{Markers: make([]dto.ZincMarker, 0)}
 
 	// Get a pointer to a slice from the pool
@@ -240,10 +242,12 @@ func (s *BleveSearchService) SearchMarkerAddress(t string) (dto.MarkerSearchResp
 		totalTook += fuzzyTook
 	}
 
-	// Adjust scores based on similarity
-	adjustScoresBySimilarity(allResults, t)
+	// If this is not a station search, adjust scores based on similarity and re-sort.
+	if _, isStationSearch := s.stationMap[t]; !isStationSearch {
+		adjustScoresBySimilarity(allResults, t)
+		sortResultsByScore(allResults)
+	}
 
-	sortResultsByScore(allResults)
 	response.Took = int(totalTook.Milliseconds())
 	response.Markers = extractMarkers(allResults)
 
@@ -722,6 +726,7 @@ func performWholeQuerySearch(index bleve.Index, t string, terms []string, result
 		case "initialConsonants":
 			matchBoost = 30.0
 			prefixBoost = 20.0
+			termStr = SegmentConsonants(termStr)
 		default:
 			matchBoost = 100.0
 			prefixBoost = 80.0
@@ -847,7 +852,7 @@ func performWholeQuerySearch(index bleve.Index, t string, terms []string, result
 
 	if isStation {
 		// TODO: Gotta update the main function to know not sort
-		sortGeo, _ := search.NewSortGeoDistance("location", "m", stationLng, stationLat, false)
+		sortGeo, _ := search.NewSortGeoDistance("coordinates", "m", stationLng, stationLat, false)
 		searchRequest.SortByCustom(search.SortOrder{sortGeo})
 	} else {
 		searchRequest.SortBy([]string{"-_score", "markerId"}) // Sort by descending score
@@ -857,6 +862,26 @@ func performWholeQuerySearch(index bleve.Index, t string, terms []string, result
 	if err != nil {
 		return
 	}
+
+	// resultJSON, err := sonic.MarshalIndent(searchResult, "", "  ")
+	// if err != nil {
+	// 	log.Fatalf("Failed to marshal search result: %v", err)
+	// }
+	// log.Println(string(resultJSON))
+
+	// for _, hit := range searchResult.Hits {
+	// 	if len(hit.Sort) > 0 {
+	// 		// Decode binary-encoded float64 from the sort value
+	// 		sortVal := hit.Sort[0]
+	// 		if len(sortVal) >= 8 { // float64 needs 8 bytes
+	// 			bits := binary.BigEndian.Uint64([]byte(sortVal[:8]))
+	// 			distance := math.Float64frombits(bits)
+	// 			log.Printf("Hit %s, Distance: %.2f meters", hit.ID, distance)
+	// 		} else {
+	// 			log.Printf("Hit %s, sort value too short: %v", hit.ID, sortVal)
+	// 		}
+	// 	}
+	// }
 
 	tookTimes <- searchResult.Took
 	for _, hit := range searchResult.Hits {

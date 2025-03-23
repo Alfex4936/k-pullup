@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -65,7 +66,18 @@ func NewChatService(lifecycle fx.Lifecycle, db *sqlx.DB, redis *RedisService, ma
 
 	lifecycle.Append(fx.Hook{
 		OnStart: func(context.Context) error {
-			go service.processRetryQueue(retryCtx)
+			// go service.processRetryQueue(retryCtx)
+
+			if os.Getenv("DEPLOYMENT") == "production" {
+				go func() { // Self-invoking anonymous function to handle error logging from goroutine
+					if err := service.loadAIChats(); err != nil {
+						service.Logger.Error("Error during initial AI chat loading", zap.Error(err))
+						// Consider if you want to trigger a more severe error handling mechanism here,
+						// like sending a Slack notification about startup failure due to chat loading.
+					}
+				}()
+			}
+
 			return nil
 		},
 		OnStop: func(context.Context) error {
@@ -326,6 +338,49 @@ func (s *ChatService) GetNickname(markerID, clientID string) (string, error) {
 		}
 	}
 	return "", errors.New("connection not found")
+}
+
+func (s *ChatService) loadAIChats() error {
+	filePath := "./resource/initial_chat_messages.json" // TODO: Make configurable - e.g., from config struct/env var
+	s.Logger.Info("Loading AI chat messages from JSON file...", zap.String("filePath", filePath))
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		s.Logger.Error("Failed to open initial chat messages JSON file", zap.String("filePath", filePath), zap.Error(err))
+		return fmt.Errorf("failed to open initial chat messages JSON file: %w", err)
+	}
+	defer file.Close()
+
+	decoder := sonic.ConfigDefault.NewDecoder(file)
+	var messages []dto.BroadcastMessage
+	if err := decoder.Decode(&messages); err != nil {
+		s.Logger.Error("Failed to decode initial chat messages JSON", zap.String("filePath", filePath), zap.Error(err))
+		return fmt.Errorf("failed to decode initial chat messages JSON: %w", err)
+	}
+
+	// ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second) // Timeout for Redis ops
+	// defer cancel()
+	ctx := context.Background()
+
+	loadedCount := 0
+	errorCount := 0 // Track errors during Redis save
+	for _, msg := range messages {
+		if err := s.SaveMessageToRedis(ctx, msg); err != nil {
+			s.Logger.Error("Failed to save AI chat message to Redis", zap.Error(err), zap.Any("message", msg))
+			errorCount++
+			// Continue loading other messages even if one fails.
+			continue
+		}
+		loadedCount++
+	}
+
+	if errorCount > 0 {
+		s.Logger.Warn("AI chat messages loaded with some errors", zap.Int("loadedCount", loadedCount), zap.Int("errorCount", errorCount), zap.Int("totalMessages", len(messages)))
+		return fmt.Errorf("loaded AI chat messages with %d errors out of %d total messages", errorCount, len(messages))
+	}
+
+	s.Logger.Info("Successfully loaded AI chat messages into Redis", zap.Int("loadedCount", loadedCount), zap.Int("totalMessages", len(messages)))
+	return nil // Return nil for success
 }
 
 func changePayloadToByte(broadcastMsg dto.BroadcastMessage) []byte {

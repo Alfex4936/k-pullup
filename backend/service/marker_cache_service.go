@@ -60,14 +60,27 @@ func (s *MarkerCacheService) GetAllMarkers() ([]byte, error) {
 	getCmd := s.RedisService.Core.Client.B().Get().Key("all_markers").Build()
 
 	result, err := s.RedisService.Core.Client.Do(ctx, getCmd).AsBytes()
-	if err != nil || len(result) == 0 {
+	if err != nil {
 		return nil, err // Cache miss or error
 	}
+	
+	// Check for null or empty values
+	if len(result) == 0 || string(result) == "null" {
+		// Invalidate this problematic cache entry
+		s.InvalidateFullMarkersCache()
+		return nil, fmt.Errorf("invalid cache data")
+	}
+	
 	return result, nil
 }
 
 // Set the full cache (all markers as a byte array)
 func (s *MarkerCacheService) SetFullMarkersCache(markersJSON []byte) error {
+	// Validate that we're not storing empty or null data
+	if len(markersJSON) == 0 || string(markersJSON) == "null" {
+		return fmt.Errorf("attempted to cache empty or null markers data")
+	}
+
 	ctx := context.Background()
 	setCmd := s.RedisService.Core.Client.B().Set().Key("all_markers").Value(rueidis.BinaryString(markersJSON)).Ex(time.Hour * 24).Build()
 	return s.RedisService.Core.Client.Do(ctx, setCmd).Error()
@@ -157,7 +170,7 @@ func (s *MarkerCacheService) GetAllMarkerIDs() ([]string, error) {
 
 // user_fav
 // AddMarkerToFavorites adds a marker to the user's favorites cache
-func (s *MarkerCacheService) AddMarkerToFavorites(userID int, marker dto.MarkerSimpleWithDescrption) error {
+func (s *MarkerCacheService) AddMarkerToFavorites(userID int, marker dto.MarkerSimpleWithDescription) error {
 	// Add the marker ID to the user's favorite set
 	err := s.RedisService.AddToSet(fmt.Sprintf("user_fav:%d", userID), strconv.Itoa(marker.MarkerID))
 	if err != nil {
@@ -173,7 +186,7 @@ func (s *MarkerCacheService) AddMarkerToFavorites(userID int, marker dto.MarkerS
 }
 
 // AddFavoritesToCache adds all favorites to the user's cache concurrently
-func (s *MarkerCacheService) AddFavoritesToCache(userID int, favorites []dto.MarkerSimpleWithDescrption) error {
+func (s *MarkerCacheService) AddFavoritesToCache(userID int, favorites []dto.MarkerSimpleWithDescription) error {
 	// Prepare to concurrently add marker IDs to the user's favorite set
 	var wg sync.WaitGroup
 	errChan := make(chan error, len(favorites))
@@ -181,7 +194,7 @@ func (s *MarkerCacheService) AddFavoritesToCache(userID int, favorites []dto.Mar
 	// Concurrently cache marker IDs and marker data
 	for _, fav := range favorites {
 		wg.Add(1)
-		go func(fav dto.MarkerSimpleWithDescrption) {
+		go func(fav dto.MarkerSimpleWithDescription) {
 			defer wg.Done()
 
 			// Add marker ID to the user's favorite set
@@ -215,15 +228,34 @@ func (s *MarkerCacheService) AddFavoritesToCache(userID int, favorites []dto.Mar
 	return nil
 }
 
+func (s *MarkerCacheService) AddSingleFavoriteToCache(userID int, fav dto.MarkerSimpleWithDescription) error {
+	// Add marker ID to set
+	if err := s.RedisService.AddToSet(fmt.Sprintf("user_fav:%d", userID), strconv.Itoa(fav.MarkerID)); err != nil {
+		return fmt.Errorf("failed to add to set: %w", err)
+	}
+
+	// Cache marker details
+	markerJSON, err := sonic.Marshal(fav)
+	if err != nil {
+		return fmt.Errorf("failed to marshal marker data: %w", err)
+	}
+
+	if err := s.RedisService.SetCacheEntry(fmt.Sprintf("user_fav_marker:%d:%d", userID, fav.MarkerID), markerJSON, 24*time.Hour); err != nil {
+		return fmt.Errorf("failed to set cache entry: %w", err)
+	}
+
+	return nil
+}
+
 // GetUserFavorites retrieves the list of a user's favorite markers from the cache
-func (s *MarkerCacheService) GetUserFavorites(userID int) ([]dto.MarkerSimpleWithDescrption, error) {
+func (s *MarkerCacheService) GetUserFavorites(userID int) ([]dto.MarkerSimpleWithDescription, error) {
 	// Retrieve the list of favorite marker IDs from Redis set
 	markerIDs, err := s.RedisService.GetMembersOfSet(fmt.Sprintf("user_fav:%d", userID))
 	if err != nil {
 		return nil, err
 	}
 
-	var favorites []dto.MarkerSimpleWithDescrption
+	var favorites []dto.MarkerSimpleWithDescription
 
 	// Retrieve the individual markers from cache
 	for _, markerID := range markerIDs {
@@ -232,7 +264,7 @@ func (s *MarkerCacheService) GetUserFavorites(userID int) ([]dto.MarkerSimpleWit
 		if err != nil || len(markerData) == 0 {
 			continue // Skip any missing or invalid cache entries
 		}
-		var marker dto.MarkerSimpleWithDescrption
+		var marker dto.MarkerSimpleWithDescription
 		if err := sonic.Unmarshal(markerData, &marker); err == nil {
 			favorites = append(favorites, marker)
 		}
@@ -281,7 +313,7 @@ func (s *MarkerCacheService) InvalidateFacilities(markerID int) {
 // user_markers
 
 // AddUserMarkersPageCache caches a page of markers the user has created
-func (s *MarkerCacheService) AddUserMarkersPageCache(userID int, page int, markers []dto.MarkerSimpleWithDescrption) error {
+func (s *MarkerCacheService) AddUserMarkersPageCache(userID int, page int, markers []dto.MarkerSimpleWithDescription) error {
 	// Cache the list of markers on a specific page for the user
 	markersJSON, err := sonic.Marshal(markers)
 	if err != nil {
@@ -291,14 +323,14 @@ func (s *MarkerCacheService) AddUserMarkersPageCache(userID int, page int, marke
 }
 
 // GetUserMarkersPageCache retrieves a page of markers created by the user from the cache
-func (s *MarkerCacheService) GetUserMarkersPageCache(userID int, page int) ([]dto.MarkerSimpleWithDescrption, error) {
+func (s *MarkerCacheService) GetUserMarkersPageCache(userID int, page int) ([]dto.MarkerSimpleWithDescription, error) {
 	var markersData []byte
 	err := s.RedisService.GetCacheEntry(fmt.Sprintf("user_markers:%d:page:%d", userID, page), &markersData)
 	if err != nil || len(markersData) == 0 {
 		return nil, err
 	}
 
-	var markers []dto.MarkerSimpleWithDescrption
+	var markers []dto.MarkerSimpleWithDescription
 	if err := sonic.Unmarshal(markersData, &markers); err != nil {
 		return nil, err
 	}

@@ -30,7 +30,19 @@ func RegisterReportRoutes(api fiber.Router, handler *MarkerHandler, authMiddlewa
 	}
 }
 
-// GetAllReportsHandler retrieves all reports for all markers, grouped by MarkerID.
+// HandleGetAllReports retrieves all reports for all markers, grouped by Marker ID.
+//
+// @Summary Get all marker reports
+// @Description Fetches all reports related to markers and groups them by Marker ID.
+// @ID get-all-marker-reports
+// @Tags markers-report
+// @Accept json
+// @Produce json
+// @Security
+// @Success 200 {object} dto.ReportsResponse "List of all marker reports grouped by Marker ID"
+// @Failure 404 {object} map[string]string "No reports found"
+// @Failure 500 {object} map[string]string "Failed to retrieve reports"
+// @Router /api/v1/markers/reports/all [get]
 func (h *MarkerHandler) HandleGetAllReports(c *fiber.Ctx) error {
 	reports, err := h.MarkerFacadeService.GetAllReports()
 	if err != nil {
@@ -58,6 +70,20 @@ func (h *MarkerHandler) HandleGetAllReports(c *fiber.Ctx) error {
 	return c.JSON(response)
 }
 
+// HandleGetMarkerReports retrieves all reports for a specific marker.
+//
+// @Summary Get reports for a marker
+// @Description Fetches all reports related to a specific marker by Marker ID.
+// @ID get-marker-reports
+// @Tags markers-report
+// @Accept json
+// @Produce json
+// @Security
+// @Param markerID path int true "Marker ID"
+// @Success 200 {array} dto.MarkerReportResponse "List of reports for the marker"
+// @Failure 400 {object} map[string]string "Invalid Marker ID"
+// @Failure 500 {object} map[string]string "Failed to retrieve reports"
+// @Router /api/v1/markers/reports/marker/{markerID} [get]
 func (h *MarkerHandler) HandleGetMarkerReports(c *fiber.Ctx) error {
 	markerID, err := strconv.Atoi(c.Params("markerID"))
 	if err != nil {
@@ -71,6 +97,30 @@ func (h *MarkerHandler) HandleGetMarkerReports(c *fiber.Ctx) error {
 	return c.JSON(reports)
 }
 
+// HandleCreateReport creates a new report for a marker.
+//
+// @Summary Create a marker report
+// @Description Allows an authenticated user to report a marker, including optional location adjustments and a description.
+// @ID create-marker-report
+// @Tags markers-report
+// @Accept multipart/form-data
+// @Produce json
+// @Param markerID formData int true "Marker ID"
+// @Param latitude formData number true "Original latitude"
+// @Param longitude formData number true "Original longitude"
+// @Param newLatitude formData number false "Updated latitude (must be within 30 meters)"
+// @Param newLongitude formData number false "Updated longitude (must be within 30 meters)"
+// @Param description formData string true "Report description"
+// @Param doesExist formData boolean false "Indicates if the marker exists (true/false)"
+// @Param photos formData file true "At least one photo required"
+// @Security ApiKeyAuth
+// @Success 200 {object} map[string]string "Report created successfully"
+// @Failure 400 {object} map[string]string "Invalid parameters or inappropriate content"
+// @Failure 403 {object} map[string]string "Operations only allowed within South Korea"
+// @Failure 406 {object} map[string]string "New latitude/longitude too far from original location"
+// @Failure 409 {object} map[string]string "Check if the marker exists or upload at least one photo"
+// @Failure 500 {object} map[string]string "Failed to create report"
+// @Router /api/v1/markers/reports [post]
 func (h *MarkerHandler) HandleCreateReport(c *fiber.Ctx) error {
 	// Parse the multipart form
 	form, err := c.MultipartForm()
@@ -171,7 +221,20 @@ func (h *MarkerHandler) HandleCreateReport(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "report created successfully"})
 }
 
-// HandleApproveReport updates the status of a report to 'APPROVED'
+// HandleApproveReport approves a marker report.
+//
+// @Summary Approve a marker report
+// @Description Allows an authenticated user to approve a report related to a marker.
+// @ID approve-marker-report
+// @Tags markers-report
+// @Accept json
+// @Produce json
+// @Param reportID path int true "Report ID"
+// @Security ApiKeyAuth
+// @Success 200 "Report approved successfully"
+// @Failure 400 {object} map[string]string "Invalid report ID"
+// @Failure 500 {object} map[string]string "Unable to approve report"
+// @Router /api/v1/markers/reports/approve/{reportID} [post]
 func (h *MarkerHandler) HandleApproveReport(c *fiber.Ctx) error {
 	reportID, err := strconv.Atoi(c.Params("reportID"))
 	if err != nil {
@@ -187,7 +250,20 @@ func (h *MarkerHandler) HandleApproveReport(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusOK)
 }
 
-// HandleDenyReport updates the status of a report to 'DENIED'
+// HandleDenyReport denies a marker report.
+//
+// @Summary Deny a marker report
+// @Description Allows an authenticated user to deny a report related to a marker.
+// @ID deny-marker-report
+// @Tags markers-report
+// @Accept json
+// @Produce json
+// @Param reportID path int true "Report ID"
+// @Security ApiKeyAuth
+// @Success 200 "Report denied successfully"
+// @Failure 400 {object} map[string]string "Invalid report ID"
+// @Failure 500 {object} map[string]string "Unable to deny report"
+// @Router /api/v1/markers/reports/deny/{reportID} [post]
 func (h *MarkerHandler) HandleDenyReport(c *fiber.Ctx) error {
 	reportID, err := strconv.Atoi(c.Params("reportID"))
 	if err != nil {
@@ -205,6 +281,21 @@ func (h *MarkerHandler) HandleDenyReport(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusOK)
 }
 
+// HandleDeleteReport deletes a marker report.
+//
+// @Summary Delete a marker report
+// @Description Allows an authenticated user to delete a report related to a marker.
+// @ID delete-marker-report
+// @Tags markers-report
+// @Accept json
+// @Produce json
+// @Param reportID query int true "Report ID"
+// @Param markerID query int true "Marker ID"
+// @Security ApiKeyAuth
+// @Success 200 "Report deleted successfully"
+// @Failure 400 {object} map[string]string "Invalid report ID or marker ID"
+// @Failure 500 {object} map[string]string "Unable to remove report"
+// @Router /api/v1/markers/reports [delete]
 func (h *MarkerHandler) HandleDeleteReport(c *fiber.Ctx) error {
 	reportID, err := strconv.Atoi(c.Query("reportID"))
 	if err != nil {

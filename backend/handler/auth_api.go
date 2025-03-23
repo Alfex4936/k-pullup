@@ -106,13 +106,13 @@ func RegisterAuthRoutes(api fiber.Router, handler *AuthHandler, authMiddleaware 
 //	@Accept			json
 //	@Produce		json
 //	@Param			signUpRequest	body	dto.SignUpRequest	true	"SignUp Request"
-//	@Security		ApiKeyAuth
-//	@Success		201	{object}	models.User		"User registered successfully"
+//	@Security
+//	@Success		201	{object}	model.User		"User registered successfully"
 //	@Failure		400	{object}	map[string]interface{}	"Cannot parse JSON, wrong sign up form."
 //	@Failure		400	{object}	map[string]interface{}	"Email not verified"
 //	@Failure		409	{object}	map[string]interface{}	"Email already registered"
 //	@Failure		500	{object}	map[string]interface{}	"An error occurred while creating the user"
-//	@Router			/auth/signup [post]
+//	@Router			/api/v1/auth/signup [post]
 func (h *AuthHandler) HandleSignUp(c *fiber.Ctx) error {
 	var signUpReq dto.SignUpRequest
 	if err := c.BodyParser(&signUpReq); err != nil {
@@ -155,13 +155,13 @@ func (h *AuthHandler) HandleSignUp(c *fiber.Ctx) error {
 // @Tags		auth
 // @Accept		json
 // @Produce	json
+// @Security
 // @Param		loginRequest	body	dto.LoginRequest	true	"Login Request"
-// @Security	ApiKeyAuth
 // @Success	200	{object}	dto.LoginResponse	"User logged in successfully, includes user info and token"
 // @Failure	400	{object}	map[string]interface{}	"Cannot parse JSON, wrong login form."
 // @Failure	401	{object}	map[string]interface{}	"Invalid email or password"
 // @Failure	500	{object}	map[string]interface{}	"Failed to generate token"
-// @Router		/auth/login [post]
+// @Router		/api/v1/auth/login [post]
 func (h *AuthHandler) HandleLogin(c *fiber.Ctx) error {
 	var request dto.LoginRequest
 	// if err := c.BodyParser(&request); err != nil {
@@ -606,6 +606,25 @@ func (h *AuthHandler) HandleGitHubOAuth(c *fiber.Ctx) error {
 	return c.Redirect(redirectURL)
 }
 
+// HandleOAuthProvider handles OAuth login for different providers.
+//
+// @Summary OAuth login handler
+// @Description Handles OAuth authentication flow for supported providers (Google, Kakao, Naver)
+// @ID handle-oauth-provider
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param provider path string true "OAuth provider (google, kakao, naver)"
+// @Param state query string false "OAuth state parameter"
+// @Param code query string false "OAuth authorization code"
+// @Param mobileToken query string false "Access token from mobile client"
+// @Param returnUrl query string false "Redirect URL after successful authentication"
+// @Security
+// @Success 200 {object} map[string]string "User successfully authenticated and redirected"
+// @Failure 400 {object} map[string]string "Invalid provider or request parameters"
+// @Failure 401 {object} map[string]string "Unauthorized due to invalid state or authentication failure"
+// @Failure 500 {object} map[string]string "Internal server error during authentication"
+// @Router /api/v1/auth/oauth/{provider} [get]
 func (h *AuthHandler) HandleOAuthProvider(provider string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return h.handleOAuth(c, provider)
@@ -744,6 +763,18 @@ func (h *AuthHandler) handleOAuth(c *fiber.Ctx, provider string) error {
 	return c.Redirect(redirectURL)
 }
 
+// HandleLogout handles user logout.
+//
+// @Summary Logout user
+// @Description Logs out the authenticated user by clearing the session and authentication token.
+// @ID handle-logout
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Success 200 {object} map[string]string "Logged out successfully"
+// @Failure 500 {object} map[string]string "Internal server error during logout"
+// @Router /api/v1/auth/logout [post]
 func (h *AuthHandler) HandleLogout(c *fiber.Ctx) error {
 	// Retrieve user ID from context or session
 	userID, ok := c.Locals("userID").(int)
@@ -785,12 +816,12 @@ func (h *AuthHandler) HandleLogout(c *fiber.Ctx) error {
 // @Tags		auth
 // @Accept		json
 // @Produce	json
+// @Security
 // @Param		email	formData	string	true	"User Email"
-// @Security	ApiKeyAuth
 // @Success	200	"Email sending initiated successfully"
 // @Failure	409	{object}	map[string]interface{}	"Email already registered"
 // @Failure	500	{object}	map[string]interface{}	"An unexpected error occurred"
-// @Router		/auth/send-verification-email [post]
+// @Router		/api/v1/auth/send-verification-email [post]
 func (h *AuthHandler) HandleSendVerificationEmail(c *fiber.Ctx) error {
 	userEmail := c.FormValue("email")
 	userEmail = strings.ToLower(userEmail)
@@ -844,7 +875,6 @@ func (h *AuthHandler) HandleSendVerificationEmail(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusOK)
 }
 
-// godoc
 // Validate Token godoc
 //
 // @Summary		Validate token
@@ -858,11 +888,11 @@ func (h *AuthHandler) HandleSendVerificationEmail(c *fiber.Ctx) error {
 // @Produce	json
 // @Param		token	formData	string	true	"Token for validation"
 // @Param		email	formData	string	true	"User's email associated with the token"
-// @Security	ApiKeyAuth
+// @Security
 // @Success	200	"Token validated successfully"
 // @Failure	400	{object}	map[string]interface{}	"Invalid or expired token"
 // @Failure	500	{object}	map[string]interface{}	"Error validating token"
-// @Router		/auth/validate-token [post]
+// @Router		/api/v1/auth/validate-token [post]
 func (h *AuthHandler) HandleValidateToken(c *fiber.Ctx) error {
 	token := c.FormValue("token")
 	email := c.FormValue("email")
@@ -892,10 +922,10 @@ func (h *AuthHandler) HandleValidateToken(c *fiber.Ctx) error {
 // @Accept		json
 // @Produce	json
 // @Param		email	formData	string	true	"User's email address for password reset"
-// @Security	ApiKeyAuth
+// @Security
 // @Success	200	"Password reset request initiated successfully"
 // @Failure	500	{object}	map[string]interface{}	"Failed to request reset password"
-// @Router		/auth/request-reset-password [post]
+// @Router		/api/v1/auth/request-reset-password [post]
 func (h *AuthHandler) HandleRequestResetPassword(c *fiber.Ctx) error {
 	email := c.FormValue("email")
 
@@ -933,10 +963,10 @@ func (h *AuthHandler) HandleRequestResetPassword(c *fiber.Ctx) error {
 // @Produce	json
 // @Param		token		formData	string	true	"Password reset token"
 // @Param		password	formData	string	true	"New password"
-// @Security	ApiKeyAuth
+// @Security
 // @Success	200	"Password reset successfully"
 // @Failure	500	{object}	map[string]interface{}	"Failed to reset password"
-// @Router		/auth/reset-password [post]
+// @Router		/api/v1/auth/reset-password [post]
 func (h *AuthHandler) HandleResetPassword(c *fiber.Ctx) error {
 	token := c.FormValue("token")
 	newPassword := c.FormValue("password")

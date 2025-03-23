@@ -2,6 +2,7 @@ package service
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -21,25 +22,54 @@ const (
 	insertStoryQuery = "INSERT INTO Stories (MarkerID, UserID, Caption, PhotoURL, Blurhash, Address, ExpiresAt) VALUES (?, ?, ?, ?, ?, ?, ?)"
 
 	selectStoriesQuery = `
-SELECT 
-	s.StoryID, 
-	s.MarkerID, 
-	s.UserID, 
-	s.Caption, 
-	s.PhotoURL, 
-	s.CreatedAt, 
-	s.ExpiresAt, 
-	s.Address, 
-	u.Username,
-	COALESCE(SUM(CASE WHEN r.ReactionType = 'thumbsup' THEN 1 ELSE 0 END), 0) AS ThumbsUp,
-	COALESCE(SUM(CASE WHEN r.ReactionType = 'thumbsdown' THEN 1 ELSE 0 END), 0) AS ThumbsDown
+-- REPLACE your existing selectStoriesQuery with this:
+SELECT
+    s.StoryID,
+    s.MarkerID,
+    s.UserID,
+    s.Caption,
+    s.PhotoURL,
+    s.CreatedAt,
+    s.ExpiresAt,
+    s.Address,
+    u.Username,
+
+    -- ThumbsUp count
+    (SELECT COUNT(*) 
+     FROM Reactions r2
+     WHERE r2.StoryID = s.StoryID 
+       AND r2.ReactionType = 'thumbsup'
+    ) AS ThumbsUp,
+
+    -- ThumbsDown count
+    (SELECT COUNT(*) 
+     FROM Reactions r3
+     WHERE r3.StoryID = s.StoryID 
+       AND r3.ReactionType = 'thumbsdown'
+    ) AS ThumbsDown,
+
+    -- Whether the requesting user has 'thumbsup' on this story
+    CASE 
+       WHEN EXISTS (
+         SELECT 1
+         FROM Reactions r4
+         WHERE r4.StoryID = s.StoryID
+           AND r4.UserID = ?
+           AND r4.ReactionType = 'thumbsup'
+       ) THEN TRUE 
+       ELSE FALSE 
+    END AS UserLiked
+
 FROM Stories s
-JOIN Users u ON s.UserID = u.UserID
-LEFT JOIN Reactions r ON s.StoryID = r.StoryID
-WHERE s.MarkerID = ? AND s.ExpiresAt > ?
-GROUP BY s.StoryID
+JOIN Users u 
+      ON s.UserID = u.UserID
+
+WHERE s.MarkerID = ?
+  AND s.ExpiresAt > ?
+
 ORDER BY s.CreatedAt DESC
-    `
+LIMIT ? OFFSET ?;
+`
 
 	selectUserIdFromStoriesQuery = "SELECT MarkerID, UserID FROM Stories WHERE StoryID = ?"
 
@@ -70,11 +100,66 @@ ORDER BY s.CreatedAt DESC
         ORDER BY s.CreatedAt DESC
         LIMIT ? OFFSET ?
     `
+	selectAllStoriesWithSubsQuery = `
+	SELECT
+		s.StoryID,
+		s.MarkerID,
+		s.UserID,
+		s.Caption,
+		s.PhotoURL,
+		s.CreatedAt,
+		s.ExpiresAt,
+		s.Address,
+		u.Username,
+	
+		(SELECT COUNT(*) 
+		 FROM Reactions r2
+		 WHERE r2.StoryID = s.StoryID 
+		   AND r2.ReactionType = 'thumbsup'
+		) AS ThumbsUp,
+	
+		(SELECT COUNT(*) 
+		 FROM Reactions r3
+		 WHERE r3.StoryID = s.StoryID 
+		   AND r3.ReactionType = 'thumbsdown'
+		) AS ThumbsDown,
+	
+		CASE 
+		   WHEN EXISTS (
+			 SELECT 1
+			 FROM Reactions r4
+			 WHERE r4.StoryID = s.StoryID
+			   AND r4.UserID = ?
+			   AND r4.ReactionType = 'thumbsup'
+		   ) THEN TRUE 
+		   ELSE FALSE 
+		END AS UserLiked
+	
+	FROM Stories s
+	JOIN Users u ON s.UserID = u.UserID
+	WHERE s.ExpiresAt > ?
+	ORDER BY s.CreatedAt DESC
+	LIMIT ? OFFSET ?;
+	`
 
 	getMarkerIDFromStoryIDQuery = "SELECT MarkerID FROM Stories WHERE StoryID = ?"
 	checkExistingStoryIdQuery   = "SELECT EXISTS(SELECT 1 FROM Stories WHERE StoryID = ?)"
 
 	getMarkerAddressQuery = "SELECT Address FROM Markers WHERE MarkerID = ?"
+
+	refetchActualReactionCounts = `
+        SELECT
+          COALESCE(SUM(CASE WHEN r.ReactionType = 'thumbsup' THEN 1 ELSE 0 END), 0) AS thumbsUp,
+          COALESCE(SUM(CASE WHEN r.ReactionType = 'thumbsdown' THEN 1 ELSE 0 END), 0) AS thumbsDown,
+          CASE WHEN EXISTS (
+            SELECT 1 FROM Reactions r2
+            WHERE r2.StoryID = r.StoryID 
+              AND r2.UserID = ? 
+              AND r2.ReactionType = 'thumbsup'
+          ) THEN TRUE ELSE FALSE END AS userLiked
+        FROM Reactions r
+        WHERE r.StoryID = ?
+    `
 )
 
 type StoryService struct {
@@ -217,38 +302,39 @@ func (s *StoryService) GetAllStories(page int, pageSize int) ([]dto.StoryRespons
 	return stories, nil
 }
 
-func (s *StoryService) GetStories(markerID int, offset int, pageSize int) ([]dto.StoryResponse, error) {
-	// Check cache first
+func (s *StoryService) GetStories(userID, markerID, offset, pageSize int) ([]dto.StoryResponseOneMarker, error) {
+	var stories []dto.StoryResponseOneMarker
 	cacheKey := fmt.Sprintf("stories:%d:offset:%d", markerID, offset)
-	var stories []dto.StoryResponse
+	// Check cache first
 	err := s.Redis.GetCacheEntry(cacheKey, &stories)
 	if err == nil {
 		return stories, nil
 	}
 
 	// Fetch stories with pagination
-	args := []interface{}{markerID, time.Now().UTC()}
-
-	err = s.DB.Select(&stories, selectStoriesQuery, args...)
+	err = s.DB.Select(&stories, selectStoriesQuery, userID, markerID, time.Now().UTC(), pageSize, offset)
 	if err != nil {
+		s.Logger.Error("Failed to fetch stories", zap.Error(err))
 		return nil, err
 	}
 
 	// Cache the result with expiration based on the earliest ExpiresAt
 	if len(stories) > 0 {
-		earliestExpiresAt := stories[0].ExpiresAt
+		earliest := stories[0].ExpiresAt
 		for _, story := range stories {
-			if story.ExpiresAt.Before(earliestExpiresAt) {
-				earliestExpiresAt = story.ExpiresAt
+			if story.ExpiresAt.Before(earliest) {
+				earliest = story.ExpiresAt
 			}
 		}
-		duration := time.Until(earliestExpiresAt)
-		if duration > 0 {
-			s.Redis.SetCacheEntry(cacheKey, stories, duration)
+		duration := time.Until(earliest)
+		if duration <= 0 {
+			// fallback
+			duration = 5 * time.Minute
 		}
+		s.Redis.SetCacheEntry(cacheKey, stories, duration)
 	} else {
-		// Cache empty result for a short duration to prevent cache stampede
-		s.Redis.SetCacheEntry(cacheKey, stories, time.Minute*5)
+		// If no results, keep a short cache to prevent repeated DB hits
+		s.Redis.SetCacheEntry(cacheKey, stories, 5*time.Minute)
 	}
 
 	return stories, nil
@@ -275,8 +361,7 @@ func (s *StoryService) DeleteStory(markerID int, storyID int, userID int, userRo
 	}()
 
 	// Step 1: Check if the story exists and get details
-	var dbMarkerID int
-	var ownerID int
+	var dbMarkerID, ownerID int
 	err = tx.QueryRow(selectUserIdFromStoriesQuery, storyID).Scan(&dbMarkerID, &ownerID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -328,7 +413,6 @@ func (s *StoryService) DeleteStory(markerID int, storyID int, userID int, userRo
 }
 
 func (s *StoryService) AddReaction(storyID int, userID int, reactionType string) error {
-	// Begin a transaction
 	tx, txErr := s.DB.Beginx()
 	if txErr != nil {
 		return txErr
@@ -336,16 +420,21 @@ func (s *StoryService) AddReaction(storyID int, userID int, reactionType string)
 	var err error
 	defer func() {
 		if err != nil {
-			if rollbackErr := tx.Rollback(); rollbackErr != nil {
-				s.Logger.Error("Failed to rollback transaction", zap.Error(rollbackErr))
-			}
+			tx.Rollback()
 		} else {
-			if commitErr := tx.Commit(); commitErr != nil {
-				s.Logger.Error("Failed to commit transaction", zap.Error(commitErr))
-				err = commitErr
-			}
+			tx.Commit()
 		}
 	}()
+
+	// Ensure the story exists before inserting a reaction
+	var exists bool
+	err = tx.Get(&exists, checkExistingStoryIdQuery, storyID)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return fmt.Errorf("story with ID %d does not exist", storyID)
+	}
 
 	// Insert or update the reaction
 	_, err = tx.Exec(addReactionToStoryQuery, storyID, userID, reactionType, reactionType)
@@ -360,14 +449,23 @@ func (s *StoryService) AddReaction(storyID int, userID int, reactionType string)
 		return err
 	}
 
-	// Invalidate cache for the marker's stories
-	s.Redis.ResetAllCache(fmt.Sprintf("stories:%d:*", markerID))
+	// Get new aggregated thumbsUp/thumbsDown from DB
+	var res struct {
+		ThumbsUp   int  `db:"thumbsUp"`
+		ThumbsDown int  `db:"thumbsDown"`
+		UserLiked  bool `db:"userLiked"`
+	}
 
-	return nil
+	// A small query that just re-aggregates for that one story
+	err = tx.Get(&res, refetchActualReactionCounts, userID, storyID)
+	if err != nil {
+		return err
+	}
+
+	return s.UpdateStoryReactionInCache(storyID, markerID, res.ThumbsUp, res.ThumbsDown, res.UserLiked)
 }
 
 func (s *StoryService) RemoveReaction(storyID int, userID int) error {
-	// Begin a transaction
 	tx, txErr := s.DB.Beginx()
 	if txErr != nil {
 		return txErr
@@ -375,17 +473,13 @@ func (s *StoryService) RemoveReaction(storyID int, userID int) error {
 	var err error
 	defer func() {
 		if err != nil {
-			if rollbackErr := tx.Rollback(); rollbackErr != nil {
-				s.Logger.Error("Failed to rollback transaction", zap.Error(rollbackErr))
-			}
+			tx.Rollback()
 		} else {
-			if commitErr := tx.Commit(); commitErr != nil {
-				s.Logger.Error("Failed to commit transaction", zap.Error(commitErr))
-				err = commitErr
-			}
+			tx.Commit()
 		}
 	}()
 
+	// Delete the reaction
 	_, err = tx.Exec(deleteReactionFromStoryQuery, storyID, userID)
 	if err != nil {
 		return err
@@ -398,10 +492,21 @@ func (s *StoryService) RemoveReaction(storyID int, userID int) error {
 		return err
 	}
 
-	// Invalidate cache for the marker's stories
-	s.Redis.ResetAllCache(fmt.Sprintf("stories:%d:*", markerID))
+	// Re-fetch the actual counts from DB
+	var res struct {
+		ThumbsUp   int  `db:"thumbsUp"`
+		ThumbsDown int  `db:"thumbsDown"`
+		UserLiked  bool `db:"userLiked"`
+	}
 
-	return nil
+	// Same query as in AddReaction to get up/down + userLiked
+	err = tx.Get(&res, refetchActualReactionCounts, userID, storyID)
+	if err != nil {
+		return err
+	}
+
+	// Overwrite the cache with the correct DB values
+	return s.UpdateStoryReactionInCache(storyID, markerID, res.ThumbsUp, res.ThumbsDown, res.UserLiked)
 }
 
 func (s *StoryService) ReportStory(storyID int, userID int, reason string) error {
@@ -424,6 +529,58 @@ func (s *StoryService) ReportStory(storyID int, userID int, reason string) error
 			return fmt.Errorf("you have already reported this story")
 		}
 		return err
+	}
+
+	return nil
+}
+
+// Overwrite the story's thumbsUp/thumbsDown/userLiked in the cache
+func (s *StoryService) UpdateStoryReactionInCache(
+	storyID, markerID, thumbsUp, thumbsDown int, userLiked bool,
+) error {
+	cacheKeyPattern := fmt.Sprintf("stories:%d:offset:*", markerID)
+	ctx := context.Background()
+	var cursor uint64
+
+	for {
+		scanCmd := s.Redis.Core.Client.B().Scan().Cursor(cursor).Match(cacheKeyPattern).Count(10).Build()
+		scanEntry, err := s.Redis.Core.Client.Do(ctx, scanCmd).AsScanEntry()
+		if err != nil {
+			return err
+		}
+
+		cursor = scanEntry.Cursor
+		keys := scanEntry.Elements
+
+		for _, key := range keys {
+			var stories []dto.StoryResponseOneMarker
+			err := s.Redis.GetCacheEntry(key, &stories)
+			if err != nil {
+				continue
+			}
+
+			modified := false
+			for i, story := range stories {
+				if story.StoryID == storyID {
+					stories[i].ThumbsUp = thumbsUp
+					stories[i].ThumbsDown = thumbsDown
+					stories[i].UserLiked = userLiked
+					modified = true
+					break
+				}
+			}
+
+			if modified {
+				err := s.Redis.SetCacheEntry(key, stories, time.Minute*10)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		if cursor == 0 {
+			break
+		}
 	}
 
 	return nil

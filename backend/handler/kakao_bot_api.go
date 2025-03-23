@@ -43,6 +43,18 @@ func RegisterKakaoBotRoutes(api fiber.Router, handler *KakaoBotHandler, authMidd
 	}
 }
 
+// HandleKakaoRecentWithPhotos retrieves recent markers with photos for KakaoBot.
+//
+// @Summary Get recent markers with photos for KakaoBot
+// @Description Fetches the most recent 10 markers with extra details formatted for KakaoBot.
+// @ID kakao-recent-markers
+// @Tags kakaobot
+// @Accept json
+// @Produce json
+// @Security
+// @Success 200 {object} map[string]interface{} "KakaoBot carousel response with recent markers"
+// @Failure 500 {object} map[string]string "Failed to retrieve recent markers"
+// @Router /api/v1/kakaobot/markers/recent-with-photos [post]
 func (h *KakaoBotHandler) HandleKakaoRecentWithPhotos(c *fiber.Ctx) error {
 	// Attempt to retrieve from cache first
 	var response k.K
@@ -100,6 +112,19 @@ func (h *KakaoBotHandler) HandleKakaoRecentWithPhotos(c *fiber.Ctx) error {
 	return c.JSON(json)
 }
 
+// HandleKakaoSearchMarkers searches for markers based on a user's query via KakaoBot.
+//
+// @Summary Search markers for KakaoBot
+// @Description Searches for markers based on a query from the KakaoBot request.
+// @ID kakao-search-markers
+// @Tags kakaobot
+// @Accept json
+// @Produce json
+// @Security
+// @Param request body map[string]interface{} true "KakaoBot search request containing user input"
+// @Success 200 {object} map[string]interface{} "KakaoBot list card response with search results"
+// @Failure 500 {object} map[string]string "Failed to process search request"
+// @Router /api/v1/kakaobot/markers/search [post]
 func (h *KakaoBotHandler) HandleKakaoSearchMarkers(c *fiber.Ctx) error {
 	var kakaoRequest k.Request
 

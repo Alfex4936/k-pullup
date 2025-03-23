@@ -54,8 +54,8 @@ func NewMarkerHandler(
 
 func RegisterMarkerRoutes(api fiber.Router, handler *MarkerHandler, authMiddleware *middleware.AuthMiddleware) {
 	api.Get("/markers", handler.HandleGetAllMarkersLocal)
-	api.Get("/markers2", handler.HandleGetAllMarkersLocalMsgp)
-	api.Get("/markers-proto", handler.HandleGetAllMarkersProto)
+	// api.Get("/markers2", handler.HandleGetAllMarkersLocalMsgp)
+	// api.Get("/markers-proto", handler.HandleGetAllMarkersProto)
 	api.Get("/markers/new", handler.HandleGetAllNewMarkers)
 
 	api.Get("/markers/:markerId/details", authMiddleware.VerifySoft, handler.HandleGetMarker)
@@ -63,7 +63,7 @@ func RegisterMarkerRoutes(api fiber.Router, handler *MarkerHandler, authMiddlewa
 	api.Get("/markers/close", handler.HandleFindCloseMarkers)
 	api.Get("/markers/ranking", handler.HandleGetMarkerRanking)
 	api.Get("/markers/unique-ranking", handler.HandleGetUniqueVisitorCount)
-	api.Get("/markers/unique-ranking/all", handler.HandleGetAllUniqueVisitorCount)
+	// api.Get("/markers/unique-ranking/all", handler.HandleGetAllUniqueVisitorCount)
 	api.Get("/markers/area-ranking", handler.HandleGetCurrentAreaMarkerRanking)
 	api.Get("/markers/convert", handler.HandleConvertWGS84ToWCONGNAMUL)
 	api.Get("/markers/location-check", handler.HandleIsInSouthKorea)
@@ -75,7 +75,7 @@ func RegisterMarkerRoutes(api fiber.Router, handler *MarkerHandler, authMiddlewa
 	// api.Get("/markers/save-offline-test", handler.HandleTestDynamic)
 	api.Get("/markers/save-offline", limiter.New(limiter.Config{
 		KeyGenerator: func(c *fiber.Ctx) string {
-			return handler.MarkerFacadeService.ChatUtil.GetUserIP(c)
+			return "login-" + handler.MarkerFacadeService.ChatUtil.GetUserIP(c)
 		},
 		Max:               5,
 		Expiration:        1 * time.Minute,
@@ -99,7 +99,7 @@ func RegisterMarkerRoutes(api fiber.Router, handler *MarkerHandler, authMiddlewa
 	// api.Post("/markers/refresh", authMiddleware.CheckAdmin, handler.HandleRefreshMarkerCache)
 
 	api.Get("/markers/stories", handler.HandleGetAllStories)
-	api.Get("/markers/:markerID/stories", handler.HandleGetStories)
+	api.Get("/markers/:markerID/stories", authMiddleware.VerifySoft, handler.HandleGetStories)
 
 	markerGroup := api.Group("/markers")
 	{
@@ -150,6 +150,17 @@ func (h *MarkerHandler) HandleGetAllMarkersProto(c *fiber.Ctx) error {
 	return c.Send(data)
 }
 
+// HandleGet10NewPictures retrieves the 10 most recently added marker pictures.
+//
+// @Summary Get 10 new marker pictures
+// @Description Fetches a list of the 10 most recently added pictures associated with markers.
+// @ID get-10-new-marker-pictures
+// @Tags markers-data
+// @Accept json
+// @Produce json
+// @Success 200 {array} dto.MarkerNewPicture "List of 10 new marker pictures"
+// @Failure 500 {object} map[string]string "Failed to fetch markers"
+// @Router /api/v1/markers/new-pictures [get]
 func (h *MarkerHandler) HandleGet10NewPictures(c *fiber.Ctx) error {
 	markers, err := h.MarkerFacadeService.GetNew10Pictures()
 	if err != nil {
@@ -160,6 +171,18 @@ func (h *MarkerHandler) HandleGet10NewPictures(c *fiber.Ctx) error {
 	return c.JSON(markers)
 }
 
+// HandleGetAllMarkersLocal retrieves all markers.
+//
+// @Summary Get all markers
+// @Description Retrieves a full list of markers from the cache or database.
+// @ID get-all-markers
+// @Tags markers-data
+// @Accept json
+// @Produce json
+// @Security
+// @Success 200 {array} dto.MarkerSimple "List of all markers"
+// @Failure 500 {object} map[string]string "Internal server error when retrieving markers"
+// @Router /api/v1/markers [get]
 func (h *MarkerHandler) HandleGetAllMarkersLocal(c *fiber.Ctx) error {
 	// Check the Referer header and redirect if it matches the specific URL pattern
 	// if !strings.HasSuffix(c.Get("Referer"), ".k-pullup.com") || c.Get("Referer") != "https://www.k-pullup.com/" {
@@ -168,8 +191,8 @@ func (h *MarkerHandler) HandleGetAllMarkersLocal(c *fiber.Ctx) error {
 	c.Set("Content-type", "application/json")
 
 	// Attempt to fetch cached data first
-	cached, _ := h.CacheService.GetAllMarkers() // from Redis, on error will proceed to fetch from DB
-	if len(cached) > 0 {
+	cached, err := h.CacheService.GetAllMarkers() // from Redis, on error will proceed to fetch from DB
+	if err == nil && len(cached) > 0 && string(cached) != "null" {
 		// Cache hit, return the cached byte array
 		c.Append("X-Cache", "hit")
 		return c.Send(cached)
@@ -181,6 +204,11 @@ func (h *MarkerHandler) HandleGetAllMarkersLocal(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to get markers"})
 	}
 
+	if len(markers) == 0 {
+		// Return empty array instead of null
+		return c.Send([]byte("[]"))
+	}
+
 	// Marshal the markers to JSON for caching and response
 	markersJSON, err := sonic.ConfigFastest.Marshal(markers)
 	if err != nil {
@@ -188,9 +216,14 @@ func (h *MarkerHandler) HandleGetAllMarkersLocal(c *fiber.Ctx) error {
 	}
 
 	// Cache the full list of markers
-	err = h.CacheService.SetFullMarkersCache(markersJSON)
-	if err != nil {
-		h.logger.Error("Failed to cache full markers", zap.Error(err))
+	// TODO: Stale-While-Revalidate?
+	// Verify we're not caching "null" or empty data
+	if len(markersJSON) > 0 && string(markersJSON) != "null" {
+		// Cache the full list of markers
+		err = h.CacheService.SetFullMarkersCache(markersJSON)
+		if err != nil {
+			h.logger.Error("Failed to cache full markers", zap.Error(err))
+		}
 	}
 
 	return c.Send(markersJSON)
@@ -226,21 +259,34 @@ func (h *MarkerHandler) HandleGetAllMarkersLocalMsgp(c *fiber.Ctx) error {
 	return c.Send(markersBin)
 }
 
-// HandleGetAllNewMarkers handles requests to fetch a paginated list of newly added markers.
+// HandleGetAllNewMarkers retrieves a paginated list of newly added markers.
+//
+// @Summary Get newly added markers
+// @Description Fetches a paginated list of markers that were recently added.
+// @ID get-new-markers
+// @Tags markers-data, pagination
+// @Accept json
+// @Produce json
+// @Security
+// @Param page query int false "Page number (default: 1)"
+// @Param pageSize query int false "Number of markers per page (default: 10)"
+// @Success 200 {array} dto.MarkerNewResponse "List of newly added markers"
+// @Failure 400 {object} map[string]string "Invalid pagination parameters"
+// @Failure 500 {object} map[string]string "Internal server error when fetching markers"
+// @Router /api/v1/markers/new [get]
 func (h *MarkerHandler) HandleGetAllNewMarkers(c *fiber.Ctx) error {
-	// Extract page and pageSize from query parameters. Provide default values if not specified.
-	page, err := strconv.Atoi(c.Query("page", "1")) // Default to page 1 if not specified
+	pagination, err := util.ParsePaginationParams(c, &util.PaginationConfig{
+		DefaultPage:       1,
+		DefaultPageSize:   10,
+		PageParamName:     "page",
+		PageSizeParamName: "pageSize",
+	})
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid page number"})
-	}
-
-	pageSize, err := strconv.Atoi(c.Query("pageSize", "10")) // Default to 10 markers per page if not specified
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid page size"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid pagination parameters"})
 	}
 
 	// Call the service to get markers
-	markers, err := h.MarkerFacadeService.GetAllNewMarkers(page, pageSize)
+	markers, err := h.MarkerFacadeService.GetAllNewMarkers(pagination.Page, pagination.PageSize)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not fetch markers: " + err.Error()})
 	}
@@ -248,7 +294,20 @@ func (h *MarkerHandler) HandleGetAllNewMarkers(c *fiber.Ctx) error {
 	return c.JSON(markers)
 }
 
-// HandleGetMarker handler
+// HandleGetMarker retrieves details of a specific marker.
+//
+// @Summary Get marker details
+// @Description Fetches detailed information about a specific marker, including user-specific interactions if available.
+// @ID get-marker-details
+// @Tags markers-data
+// @Accept json
+// @Produce json
+// @Security
+// @Param markerId path int true "Marker ID"
+// @Success 200 {object} model.MarkerWithPhotos "Marker details including photos"
+// @Failure 400 {object} map[string]string "Invalid Marker ID"
+// @Failure 404 {object} map[string]string "Marker not found"
+// @Router /api/v1/markers/{markerId}/details [get]
 func (h *MarkerHandler) HandleGetMarker(c *fiber.Ctx) error {
 	markerID, err := strconv.Atoi(c.Params("markerId"))
 	if err != nil {
@@ -291,6 +350,24 @@ func (h *MarkerHandler) HandleGetAllMarkersWithAddr(c *fiber.Ctx) error {
 	return c.JSON(markersWithPhotos)
 }
 
+// HandleCreateMarkerWithPhotos creates a new marker with optional photos.
+//
+// @Summary Create a new marker
+// @Description Creates a marker with latitude, longitude, description, and optional photos.
+// @ID create-marker-with-photos
+// @Tags markers
+// @Accept multipart/form-data
+// @Produce json
+// @Param latitude formData number true "Latitude of the marker"
+// @Param longitude formData number true "Longitude of the marker"
+// @Param description formData string false "Description of the marker"
+// @Param photos formData file false "Marker photos (multiple allowed)"
+// @Security ApiKeyAuth
+// @Success 201 {object} dto.MarkerResponse "Marker created successfully"
+// @Failure 400 {object} map[string]string "Invalid request parameters or form data"
+// @Failure 409 {object} map[string]string "Error during file upload"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/v1/markers [post]
 func (h *MarkerHandler) HandleCreateMarkerWithPhotos(c *fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -334,7 +411,21 @@ func (h *MarkerHandler) HandleCreateMarkerWithPhotos(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(marker)
 }
 
-// UpdateMarker updates an existing marker
+// HandleUpdateMarker updates the description of an existing marker.
+//
+// @Summary Update marker description
+// @Description Allows the authenticated user to update the description of a specific marker.
+// @ID update-marker
+// @Tags markers
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Param markerID path int true "Marker ID"
+// @Param description formData string true "New description for the marker"
+// @Security ApiKeyAuth
+// @Success 200 {object} map[string]string "Updated marker description" example: {"description": "New marker description"}
+// @Failure 400 {object} map[string]string "Description contains profanity or invalid parameters"
+// @Failure 500 {object} map[string]string "Failed to update marker description"
+// @Router /api/v1/markers/{markerID} [put]
 func (h *MarkerHandler) HandleUpdateMarker(c *fiber.Ctx) error {
 	markerID, _ := strconv.Atoi(c.Params("markerID"))
 	description := c.FormValue("description")
@@ -350,7 +441,21 @@ func (h *MarkerHandler) HandleUpdateMarker(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"description": description})
 }
 
-// DeleteMarkerHandler handles the HTTP request to delete a marker.
+// HandleDeleteMarker deletes a marker if the user is the owner or an admin.
+//
+// @Summary Delete a marker
+// @Description Allows the authenticated owner or an admin to delete a specific marker.
+// @ID delete-marker
+// @Tags markers
+// @Accept json
+// @Produce json
+// @Param markerID path int true "Marker ID"
+// @Security ApiKeyAuth
+// @Success 200 "Marker deleted successfully"
+// @Failure 400 {object} map[string]string "Invalid marker ID"
+// @Failure 403 {object} map[string]string "User is not authorized to delete this marker"
+// @Failure 500 {object} map[string]string "Failed to delete marker"
+// @Router /api/v1/markers/{markerID} [delete]
 func (h *MarkerHandler) HandleDeleteMarker(c *fiber.Ctx) error {
 	// Auth
 	userID := c.Locals("userID").(int)
@@ -406,7 +511,20 @@ func (h *MarkerHandler) HandleUploadMarkerPhotoToS3(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"urls": urls})
 }
 
-// / DISLIKE
+// HandleLeaveDislike registers a dislike for a specific marker by the authenticated user.
+//
+// @Summary Leave a dislike on a marker
+// @Description Allows the authenticated user to dislike a marker.
+// @ID leave-marker-dislike
+// @Tags markers
+// @Accept json
+// @Produce json
+// @Param markerID path int true "Marker ID"
+// @Security ApiKeyAuth
+// @Success 200 "Dislike successfully registered"
+// @Failure 400 {object} map[string]string "Invalid marker ID"
+// @Failure 500 {object} map[string]string "Failed to leave dislike"
+// @Router /api/v1/markers/{markerID}/dislike [post]
 func (h *MarkerHandler) HandleLeaveDislike(c *fiber.Ctx) error {
 	// Auth
 	userID := c.Locals("userID").(int)
@@ -428,6 +546,20 @@ func (h *MarkerHandler) HandleLeaveDislike(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusOK)
 }
 
+// HandleUndoDislike removes a dislike from a marker.
+//
+// @Summary Undo marker dislike
+// @Description Allows the authenticated user to remove their dislike from a marker.
+// @ID undo-marker-dislike
+// @Tags markers
+// @Accept json
+// @Produce json
+// @Param markerID path int true "Marker ID"
+// @Security ApiKeyAuth
+// @Success 200 "Dislike removed successfully"
+// @Failure 400 {object} map[string]string "Invalid marker ID"
+// @Failure 500 {object} map[string]string "Failed to undo dislike"
+// @Router /api/v1/markers/{markerID}/dislike [delete]
 func (h *MarkerHandler) HandleUndoDislike(c *fiber.Ctx) error {
 	// Auth
 	userID := c.Locals("userID").(int)
@@ -448,22 +580,39 @@ func (h *MarkerHandler) HandleUndoDislike(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusOK)
 }
 
+// HandleGetUserMarkers retrieves a paginated list of markers created by the authenticated user.
+//
+// @Summary Get user's markers
+// @Description Fetches a paginated list of markers created by the currently authenticated user.
+// @ID get-user-markers
+// @Tags markers, pagination
+// @Accept json
+// @Produce json
+// @Param page query int false "Page number (default: 1)"
+// @Param pageSize query int false "Number of markers per page (default: 5)"
+// @Security ApiKeyAuth
+// @Success 200 {object} dto.UserMarkers "List of user's markers with pagination"
+// @Failure 400 {object} map[string]string "User not authenticated or invalid pagination parameters"
+// @Failure 500 {object} map[string]string "Failed to get markers"
+// @Router /api/v1/markers/my [get]
 func (h *MarkerHandler) HandleGetUserMarkers(c *fiber.Ctx) error {
 	userID, ok := c.Locals("userID").(int)
 	if !ok {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "User not authenticated"})
 	}
 
-	// Parse query parameters for pagination
-	page, err := strconv.Atoi(c.Query("page", "1"))
-	if err != nil || page < 1 {
-		page = 1 // default to first page
+	pagination, err := util.ParsePaginationParams(c, &util.PaginationConfig{
+		DefaultPage:       1,
+		DefaultPageSize:   5,
+		PageParamName:     "page",
+		PageSizeParamName: "pageSize",
+	})
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid pagination parameters"})
 	}
 
-	pageSize, err := strconv.Atoi(c.Query("pageSize", "5"))
-	if err != nil || page < 1 {
-		pageSize = 5
-	}
+	page := pagination.Page
+	pageSize := pagination.PageSize
 
 	// Try to get markers from cache
 	cachedMarkers, err := h.CacheService.GetUserMarkersPageCache(userID, page)
@@ -502,31 +651,56 @@ func (h *MarkerHandler) HandleGetUserMarkers(c *fiber.Ctx) error {
 	}
 
 	// Cache the response for future requests
-	go func() {
-		h.CacheService.AddUserMarkersPageCache(userID, page, markersWithPhotos)
-	}()
+	go h.CacheService.AddUserMarkersPageCache(userID, page, markersWithPhotos)
 
 	// Return the response
 	return c.JSON(response)
 }
 
-// CheckDislikeStatus handler
+// HandleCheckDislikeStatus checks if the authenticated user has disliked a specific marker.
+//
+// @Summary Check dislike status for a marker
+// @Description Returns whether the authenticated user has disliked the given marker.
+// @ID check-dislike-status
+// @Tags markers-data
+// @Accept json
+// @Produce json
+// @Param markerID path int true "Marker ID"
+// @Security ApiKeyAuth
+// @Success 200 {object} map[string]bool "Dislike status of the marker" example: {"disliked": true}
+// @Failure 400 {object} map[string]string "Invalid marker ID"
+// @Failure 500 {object} map[string]string "Error checking dislike status"
+// @Router /api/v1/markers/{markerID}/dislike-status [get]
 func (h *MarkerHandler) HandleCheckDislikeStatus(c *fiber.Ctx) error {
 	userID := c.Locals("userID").(int)
 	markerID, err := strconv.Atoi(c.Params("markerID"))
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid marker ID"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid marker ID"})
 	}
 
 	disliked, err := h.MarkerFacadeService.CheckUserDislike(userID, markerID)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error checking dislike status"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "error checking dislike status"})
 	}
 
 	return c.JSON(fiber.Map{"disliked": disliked})
 }
 
-// HandleAddFavorite adds a new favorite marker for the user.
+// HandleAddFavorite adds a marker to the user's favorites.
+//
+// @Summary Add a marker to favorites
+// @Description Allows the authenticated user to mark a specific marker as a favorite.
+// @ID add-marker-favorite
+// @Tags markers
+// @Accept json
+// @Produce json
+// @Param markerID path int true "Marker ID"
+// @Security ApiKeyAuth
+// @Success 200 {object} map[string]string "Favorite added successfully"
+// @Failure 400 {object} map[string]string "Invalid marker ID"
+// @Failure 403 {object} map[string]string "Maximum number of favorites reached"
+// @Failure 500 {object} map[string]string "Failed to add favorite"
+// @Router /api/v1/markers/{markerID}/favorites [post]
 func (h *MarkerHandler) HandleAddFavorite(c *fiber.Ctx) error {
 	userData, err := h.MarkerFacadeService.GetUserFromContext(c)
 	if err != nil {
@@ -542,6 +716,7 @@ func (h *MarkerHandler) HandleAddFavorite(c *fiber.Ctx) error {
 		})
 	}
 
+	// Add favorite in the database
 	err = h.MarkerFacadeService.AddFavorite(userData.UserID, markerID)
 	if err != nil {
 		// Respond differently based on the type of error
@@ -555,7 +730,14 @@ func (h *MarkerHandler) HandleAddFavorite(c *fiber.Ctx) error {
 		})
 	}
 
-	go h.CacheService.RemoveMarkerFromFavorites(userData.UserID, markerID)
+	go func() {
+		marker, markerErr := h.MarkerFacadeService.GetMarkerSimpleWithDescription(markerID)
+		if markerErr != nil {
+			//log.Printf("Failed to get one to cache: %v", markerErr)
+			return
+		}
+		h.CacheService.AddSingleFavoriteToCache(userData.UserID, marker)
+	}()
 
 	// Successfully added the favorite
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
@@ -563,6 +745,20 @@ func (h *MarkerHandler) HandleAddFavorite(c *fiber.Ctx) error {
 	})
 }
 
+// HandleRemoveFavorite removes a marker from the user's favorites.
+//
+// @Summary Remove marker from favorites
+// @Description Allows the authenticated user to remove a marker from their favorites.
+// @ID remove-marker-favorite
+// @Tags markers
+// @Accept json
+// @Produce json
+// @Param markerID path int true "Marker ID"
+// @Security ApiKeyAuth
+// @Success 204 "Favorite removed successfully (No Content)"
+// @Failure 400 {object} map[string]string "Invalid marker ID or user ID not found"
+// @Failure 500 {object} map[string]string "Failed to remove favorite"
+// @Router /api/v1/markers/{markerID}/favorites [delete]
 func (h *MarkerHandler) HandleRemoveFavorite(c *fiber.Ctx) error {
 	userID, ok := c.Locals("userID").(int)
 	if !ok {
@@ -576,7 +772,7 @@ func (h *MarkerHandler) HandleRemoveFavorite(c *fiber.Ctx) error {
 
 	err = h.MarkerFacadeService.RemoveFavorite(userID, markerID)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to remove marker favorite"})
 	}
 
 	go h.CacheService.RemoveMarkerFromFavorites(userID, markerID)
@@ -584,7 +780,20 @@ func (h *MarkerHandler) HandleRemoveFavorite(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusNoContent) // 204 No Content is appropriate for a DELETE success with no response body
 }
 
-// GetFacilitiesHandler handles requests to get facilities by marker ID.
+// HandleGetFacilities retrieves facilities for a specific marker.
+//
+// @Summary Get facilities by marker ID
+// @Description Fetches a list of facilities available at a given marker location.
+// @ID get-facilities
+// @Tags markers-data
+// @Accept json
+// @Produce json
+// @Security
+// @Param markerID path int true "Marker ID"
+// @Success 200 {array} model.Facility "List of facilities at the marker"
+// @Failure 400 {object} map[string]string "Invalid Marker ID"
+// @Failure 500 {object} map[string]string "Failed to retrieve facilities"
+// @Router /api/v1/markers/{markerID}/facilities [get]
 func (h *MarkerHandler) HandleGetFacilities(c *fiber.Ctx) error {
 	markerID, err := strconv.Atoi(c.Params("markerID"))
 	if err != nil {
@@ -609,6 +818,20 @@ func (h *MarkerHandler) HandleGetFacilities(c *fiber.Ctx) error {
 	return c.JSON(facilities)
 }
 
+// HandleSetMarkerFacilities sets facilities for a specific marker.
+//
+// @Summary Set marker facilities
+// @Description Assigns a list of facilities to a given marker.
+// @ID set-marker-facilities
+// @Tags markers
+// @Accept json
+// @Produce json
+// @Param request body dto.FacilityRequest true "Marker ID and facilities"
+// @Security ApiKeyAuth
+// @Success 200 "Facilities set successfully"
+// @Failure 400 {object} map[string]string "Invalid request body"
+// @Failure 500 {object} map[string]string "Failed to set facilities for marker"
+// @Router /api/v1/markers/facilities [post]
 func (h *MarkerHandler) HandleSetMarkerFacilities(c *fiber.Ctx) error {
 	req := new(dto.FacilityRequest)
 	if err := c.BodyParser(&req); err != nil {
@@ -637,6 +860,17 @@ func (h *MarkerHandler) HandleUpdateMarkersAddresses(c *fiber.Ctx) error {
 	})
 }
 
+// HandleRSS retrieves the RSS feed of markers.
+//
+// @Summary Get markers RSS feed
+// @Description Returns an RSS feed containing the latest marker updates.
+// @ID get-markers-rss
+// @Tags markers-data
+// @Accept json
+// @Produce text/xml; charset=utf-8
+// @Success 200 {string} string "RSS feed of markers"
+// @Failure 500 {string} string "Failed to read RSS feed file"
+// @Router /api/v1/markers/rss [get]
 func (h *MarkerHandler) HandleRSS(c *fiber.Ctx) error {
 	// rss, err := h.MarkerFacadeService.GenerateRSS()
 	// if err != nil {
@@ -673,7 +907,24 @@ func (h *MarkerHandler) HandleRefreshMarkerCache(c *fiber.Ctx) error {
 	return c.SendString("refreshed")
 }
 
-// HandleGetAllMarkers handles the HTTP request to get all markers
+// HandleVerifyMarker verifies if a marker location is valid.
+//
+// @Summary Verify marker location
+// @Description Checks if a marker at the given latitude and longitude is valid.
+// @ID verify-marker
+// @Tags markers-util
+// @Accept json
+// @Produce json
+// @Security
+// @Param latitude query number true "Latitude in WGS84 format"
+// @Param longitude query number true "Longitude in WGS84 format"
+// @Success 200 {string} string "OK"
+// @Failure 400 {object} map[string]string "Invalid query parameters or comment contains inappropriate content"
+// @Failure 403 {object} map[string]string "Operation is only allowed within South Korea"
+// @Failure 409 {object} map[string]string "There is a marker already nearby"
+// @Failure 422 {object} map[string]string "Marker is in a restricted area"
+// @Failure 500 {object} map[string]string "Internal server error during verification"
+// @Router /api/v1/markers/verify [get]
 func (h *MarkerHandler) HandleVerifyMarker(c *fiber.Ctx) error {
 	lat, lng, err := GetLatLong(c)
 	if err != nil {
@@ -682,12 +933,26 @@ func (h *MarkerHandler) HandleVerifyMarker(c *fiber.Ctx) error {
 
 	merr := h.MarkerFacadeService.CheckMarkerValidity(lat, lng, "")
 	if merr != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": merr.Error()})
+		return c.Status(merr.Code).JSON(fiber.Map{"error": merr.Error()})
 	}
 
 	return c.Status(fiber.StatusOK).SendString("OK")
 }
 
+// HandleGetRoadViewPicDate retrieves the date of the latest 카카오 road view picture for a given location.
+//
+// @Summary Get 카카오 road view picture date
+// @Description Fetches the most recent 카카오 road view picture date for the given latitude and longitude.
+// @ID get-roadview-pic-date
+// @Tags markers-util
+// @Accept json
+// @Produce json
+// @Param latitude query number true "Latitude in WGS84 format"
+// @Param longitude query number true "Longitude in WGS84 format"
+// @Success 200 {object} map[string]string "Date of the most recent road view picture" example: {"shot_date": "2023-05-10T14:00:00Z"}
+// @Failure 400 {object} map[string]string "Invalid query parameters"
+// @Failure 500 {object} map[string]string "Failed to fetch road view date"
+// @Router /api/v1/markers/roadview-date [get]
 func (h *MarkerHandler) HandleGetRoadViewPicDate(c *fiber.Ctx) error {
 	lat, lng, err := GetLatLong(c)
 	if err != nil {
@@ -702,7 +967,19 @@ func (h *MarkerHandler) HandleGetRoadViewPicDate(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"shot_date": date.Format(time.RFC3339)})
 }
 
-// 새로운 마커를 가져오는 엔드포인트
+// HandleGetNewMarkers retrieves newly added markers after a given marker ID.
+//
+// @Summary Get new markers
+// @Description Fetches a list of markers that were added after the given marker ID.
+// @ID get-new-markers-after-id
+// @Tags markers-data
+// @Accept json
+// @Produce json
+// @Security
+// @Param lastMarkerID query int false "Last known marker ID (default: 0)"
+// @Success 200 {array} dto.MarkersKakaoBot "List of newly added markers"
+// @Failure 500 {object} map[string]string "Failed to fetch markers"
+// @Router /api/v1/markers/new-markers [get]
 func (h *MarkerHandler) HandleGetNewMarkers(c *fiber.Ctx) error {
 	lastMarkerIDStr := c.Query("lastMarkerID")
 	lastMarkerID, err := strconv.Atoi(lastMarkerIDStr)

@@ -24,6 +24,8 @@ type AppConfig struct {
 	NaverEmailVerifyURL string
 	ClientURL           string
 	TestValue           string
+	TokenLength         int
+	TokenConcurrentMax  int
 }
 
 func NewAppConfig() *AppConfig {
@@ -43,6 +45,8 @@ func NewAppConfig() *AppConfig {
 		CkURL:               os.Getenv("CK_URL"),
 		NaverEmailVerifyURL: os.Getenv("NAVER_EMAIL_VERIFY_URL"),
 		ClientURL:           os.Getenv("CLIENT_ADDR"),
+		TokenLength:         32,
+		TokenConcurrentMax:  3, // 3 tokens per user,
 		TestValue:           os.Getenv("TEST_VALUE"),
 	}
 }
@@ -150,11 +154,12 @@ func NewTossPayConfig() *TossPayConfig {
 }
 
 type OAuthConfig struct {
-	FrontendURL string
-	GoogleOAuth *oauth2.Config
-	KakaoOAuth  *oauth2.Config
-	NaverOAuth  *oauth2.Config
-	GitHubOAuth *oauth2.Config
+	FrontendURL       string
+	MobileRedirectURL string
+	GoogleOAuth       *oauth2.Config
+	KakaoOAuth        *oauth2.Config
+	NaverOAuth        *oauth2.Config
+	GitHubOAuth       *oauth2.Config
 }
 
 func NewOAuthConfig() *OAuthConfig {
@@ -196,6 +201,7 @@ func NewOAuthConfig() *OAuthConfig {
 			Endpoint:     github.Endpoint,
 		},
 
-		FrontendURL: "https://k-pullup.com",
+		FrontendURL:       "https://k-pullup.com",
+		MobileRedirectURL: "kpullup://login",
 	}
 }

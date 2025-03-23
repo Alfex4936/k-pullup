@@ -48,7 +48,20 @@ func RegisterUserRoutes(api fiber.Router, handler *UserHandler, authMiddleware *
 	}
 }
 
-// UpdateUserHandler
+// HandleUpdateUser updates the authenticated user's profile.
+//
+// @Summary Update user profile
+// @Description Allows the authenticated user to update their profile details.
+// @ID update-user-profile
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param request body dto.UpdateUserRequest true "User profile update request"
+// @Security ApiKeyAuth
+// @Success 200 {object} dto.UserResponse "Updated user profile"
+// @Failure 400 {object} map[string]string "Invalid request body"
+// @Failure 500 {object} map[string]string "Could not update user profile"
+// @Router /api/v1/users/me [patch]
 func (h *UserHandler) HandleUpdateUser(c *fiber.Ctx) error {
 	userData, err := h.UserFacadeService.GetUserFromContext(c)
 	if err != nil {
@@ -82,7 +95,19 @@ func (h *UserHandler) HandleUpdateUser(c *fiber.Ctx) error {
 	return c.JSON(user)
 }
 
-// DeleteUserHandler deletes the currently authenticated user
+// HandleDeleteUser deletes the authenticated user's account.
+//
+// @Summary Delete user account
+// @Description Permanently deletes the authenticated user's account along with related data. The admin user cannot be deleted.
+// @ID delete-user-account
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Success 204 "User account deleted successfully (No Content)"
+// @Failure 400 {object} map[string]string "User ID not found or deletion of admin user not allowed"
+// @Failure 500 {object} map[string]string "Failed to delete user"
+// @Router /api/v1/users/me [delete]
 func (h *UserHandler) HandleDeleteUser(c *fiber.Ctx) error {
 	userID, ok := c.Locals("userID").(int)
 	if !ok || userID == 1 { // Prevent deletion of the admin user
@@ -98,6 +123,18 @@ func (h *UserHandler) HandleDeleteUser(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusNoContent) // 204 for successful deletion with no content in response
 }
 
+// HandleProfile retrieves the authenticated user's profile.
+//
+// @Summary Get user profile
+// @Description Fetches the profile details of the authenticated user, including statistics and contribution levels.
+// @ID get-user-profile
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Success 200 {object} dto.UserResponse "User profile details"
+// @Failure 500 {object} map[string]string "Unable to retrieve user profile"
+// @Router /api/v1/users/me [get]
 func (h *UserHandler) HandleProfile(c *fiber.Ctx) error {
 	userData, err := h.UserFacadeService.GetUserFromContext(c)
 	if err != nil {
@@ -152,6 +189,18 @@ func (h *UserHandler) HandleProfile(c *fiber.Ctx) error {
 	return c.Send(userProfileData)
 }
 
+// HandleGetFavorites retrieves the authenticated user's favorite markers.
+//
+// @Summary Get user favorite markers
+// @Description Fetches a list of markers that the authenticated user has marked as favorites.
+// @ID get-user-favorites
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Success 200 {array} dto.MarkerSimpleWithDescription "List of user's favorite markers"
+// @Failure 500 {object} map[string]string "Failed to retrieve favorite markers"
+// @Router /api/v1/users/favorites [get]
 func (h *UserHandler) HandleGetFavorites(c *fiber.Ctx) error {
 	userData, err := h.UserFacadeService.GetUserFromContext(c)
 	if err != nil {
@@ -177,7 +226,20 @@ func (h *UserHandler) HandleGetFavorites(c *fiber.Ctx) error {
 	return c.JSON(favorites)
 }
 
-// GetMyReportsHandler handles requests to get all reports submitted by the logged-in user.
+// HandleGetMyReports retrieves all reports submitted by the authenticated user.
+//
+// @Summary Get user's submitted reports
+// @Description Fetches a list of all reports that the authenticated user has submitted.
+// @ID get-user-reports
+// @Tags markers-report
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Success 200 {array} dto.MarkerReportResponse "List of reports submitted by the user"
+// @Failure 400 {object} map[string]string "User ID not found"
+// @Failure 404 {object} map[string]string "No reports found"
+// @Failure 500 {object} map[string]string "Failed to retrieve reports"
+// @Router /api/v1/users/reports [get]
 func (h *UserHandler) HandleGetMyReports(c *fiber.Ctx) error {
 	userID, ok := c.Locals("userID").(int) // Make sure to handle errors and cases where userID might not be set
 	if !ok {
@@ -196,7 +258,20 @@ func (h *UserHandler) HandleGetMyReports(c *fiber.Ctx) error {
 	return c.JSON(reports)
 }
 
-// HandleGetReportsForMyMarkers handles requests to get all reports for my markers
+// HandleGetReportsForMyMarkers retrieves all reports related to the authenticated user's markers.
+//
+// @Summary Get reports for user's markers
+// @Description Fetches all reports submitted for markers created by the authenticated user.
+// @ID get-reports-for-my-markers
+// @Tags markers-report
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Success 200 {object} dto.GroupedReportsResponse "List of reports related to the user's markers"
+// @Failure 400 {object} map[string]string "User ID not found"
+// @Failure 404 {object} map[string]string "No reports found"
+// @Failure 500 {object} map[string]string "Failed to retrieve reports"
+// @Router /api/v1/users/reports/for-my-markers [get]
 func (h *UserHandler) HandleGetReportsForMyMarkers(c *fiber.Ctx) error {
 	userID, ok := c.Locals("userID").(int) // Make sure to handle errors and cases where userID might not be set
 	if !ok {
