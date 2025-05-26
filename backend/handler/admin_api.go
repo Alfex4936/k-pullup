@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Alfex4936/chulbong-kr/dto"
@@ -523,13 +524,23 @@ func (h *AdminHandler) HandleNextImage(c *fiber.Ctx) error {
 		quality = 75
 	}
 
-	// Call the service to optimize the image.
+	// Set aggressive timeout for low-resource server
+	c.Context().SetUserValue("timeout", 10*time.Second)
+
+	// Call the service to optimize the image
 	resultBytes, contentType, err := h.AdminFacade.OptimizeImage(srcURL, width, quality, c.Get("Accept"))
 	if err != nil {
+		// Return 503 for resource exhaustion instead of 500
+		if strings.Contains(err.Error(), "timeout") || strings.Contains(err.Error(), "busy") {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "Service temporarily unavailable"})
+		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	// Add cache headers for CDN/browser caching
+	c.Set(fiber.HeaderCacheControl, "public, max-age=86400") // 24 hours
 	c.Set(fiber.HeaderContentType, contentType)
+
 	return c.Send(resultBytes)
 }
 

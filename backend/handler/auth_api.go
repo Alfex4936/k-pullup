@@ -15,6 +15,7 @@ import (
 	"github.com/Alfex4936/chulbong-kr/util"
 	sonic "github.com/bytedance/sonic"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2"
@@ -63,6 +64,18 @@ func NewAuthHandler(
 // RegisterAuthRoutes sets up the routes for auth handling within the application.
 func RegisterAuthRoutes(api fiber.Router, handler *AuthHandler, authMiddleaware *middleware.AuthMiddleware) {
 	authGroup := api.Group("/auth")
+
+	authGroup.Use(recover.New(recover.Config{
+		EnableStackTrace: true,
+		StackTraceHandler: func(c *fiber.Ctx, e any) {
+			handler.Logger.Error("Panic recovered in auth API",
+				zap.Any("error", e),
+				zap.String("url", c.Path()),
+				zap.String("method", c.Method()),
+			)
+		},
+	}))
+
 	{
 		// OAuth2
 		authGroup.Get("/google", handler.HandleOAuthProvider("google"))
@@ -80,6 +93,7 @@ func RegisterAuthRoutes(api fiber.Router, handler *AuthHandler, authMiddleaware 
 		authGroup.Post("/request-password-reset", handler.HandleRequestResetPassword)
 		authGroup.Post("/reset-password", handler.HandleResetPassword)
 	}
+
 }
 
 // func (h *AuthHandler) HandleGoogleLogin(c *fiber.Ctx) error {

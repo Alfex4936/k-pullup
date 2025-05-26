@@ -7,6 +7,8 @@ import (
 	"github.com/Alfex4936/chulbong-kr/service"
 	sonic "github.com/bytedance/sonic"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/recover"
+	"go.uber.org/zap"
 )
 
 type UserHandler struct {
@@ -15,10 +17,13 @@ type UserHandler struct {
 	AuthMiddleware *middleware.AuthMiddleware
 
 	CacheService *service.MarkerCacheService
+
+	Logger *zap.Logger
 }
 
 // NewUserHandler creates a new UserHandler with dependencies injected
 func NewUserHandler(authMiddleware *middleware.AuthMiddleware, facade *facade.UserFacadeService, c *service.MarkerCacheService,
+	logger *zap.Logger,
 ) *UserHandler {
 	return &UserHandler{
 		UserFacadeService: facade,
@@ -26,6 +31,8 @@ func NewUserHandler(authMiddleware *middleware.AuthMiddleware, facade *facade.Us
 		AuthMiddleware: authMiddleware,
 
 		CacheService: c,
+
+		Logger: logger,
 	}
 }
 
@@ -36,6 +43,17 @@ func RegisterUserRoutes(api fiber.Router, handler *UserHandler, authMiddleware *
 	api.Get("/login-home", handler.HandleServerLogin)
 
 	userGroup := api.Group("/users")
+	userGroup.Use(recover.New(recover.Config{
+		EnableStackTrace: true,
+		StackTraceHandler: func(c *fiber.Ctx, e any) {
+			handler.Logger.Error("Panic recovered in user API",
+				zap.Any("error", e),
+				zap.String("url", c.Path()),
+				zap.String("method", c.Method()),
+			)
+		},
+	}))
+
 	{
 		userGroup.Use(authMiddleware.Verify)
 		userGroup.Get("/me", authMiddleware.VerifySoft, handler.HandleProfile)

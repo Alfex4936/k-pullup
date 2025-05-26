@@ -9,19 +9,22 @@ import (
 	"github.com/Alfex4936/chulbong-kr/service"
 	"github.com/Alfex4936/chulbong-kr/util"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/recover"
+	"go.uber.org/zap"
 )
 
 type CommentHandler struct {
 	CommentService *service.MarkerCommentService
-
-	BadWordUtil *util.BadWordUtil
+	Logger         *zap.Logger
+	BadWordUtil    *util.BadWordUtil
 }
 
 // NewCommentHandler creates a new CommentHandler with dependencies injected
-func NewCommentHandler(comment *service.MarkerCommentService, butil *util.BadWordUtil,
+func NewCommentHandler(comment *service.MarkerCommentService, logger *zap.Logger, butil *util.BadWordUtil,
 ) *CommentHandler {
 	return &CommentHandler{
 		CommentService: comment,
+		Logger:         logger,
 		BadWordUtil:    butil,
 	}
 }
@@ -31,6 +34,17 @@ func RegisterCommentRoutes(api fiber.Router, handler *CommentHandler, authMiddle
 	api.Get("/comments/:markerId/comments", handler.HandleLoadComments)
 
 	commentGroup := api.Group("/comments")
+	commentGroup.Use(recover.New(recover.Config{
+		EnableStackTrace: true,
+		StackTraceHandler: func(c *fiber.Ctx, e any) {
+			handler.Logger.Error("Panic recovered in comment API",
+				zap.Any("error", e),
+				zap.String("url", c.Path()),
+				zap.String("method", c.Method()),
+			)
+		},
+	}))
+
 	{
 		commentGroup.Use(authMiddleware.Verify)
 		commentGroup.Post("", handler.HandlePostComment)

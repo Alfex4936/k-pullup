@@ -68,7 +68,8 @@ const (
 	dy               float64 = 200000 // False Northing.
 	lat0             float64 = 38     // Latitude of origin.
 	lon0             float64 = 127    // Longitude of origin.
-	radiansPerDegree float64 = math.Pi / 180
+	RadiansPerDegree float64 = math.Pi / 180
+	RadiansToDegrees float64 = 180 / math.Pi
 	scaleFactor      float64 = 2.5
 )
 
@@ -480,10 +481,10 @@ func ConvertWGS84ToWCONGNAMUL(lat, long float64) WCONGNAMULCoord {
 // transformWGS84ToKoreaTM optimizes the coordinate conversion calculation.
 // func transformWGS84ToKoreaTM(aWGS84, flatteningFactor, dx, dy, k0, lat0, lon0, lat, long)
 func transformWGS84ToKoreaTM(aWGS84, flatteningFactor, dx, dy, k0, lat0, lon0, lat, lon float64) (float64, float64) {
-	latRad := lat * radiansPerDegree
-	lonRad := lon * radiansPerDegree
-	lRad := lat0 * radiansPerDegree
-	mRad := lon0 * radiansPerDegree
+	latRad := lat * RadiansPerDegree
+	lonRad := lon * RadiansPerDegree
+	lRad := lat0 * RadiansPerDegree
+	mRad := lon0 * RadiansPerDegree
 
 	sinLat := math.Sin(latRad)
 	cosLat := math.Cos(latRad)

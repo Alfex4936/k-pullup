@@ -5,29 +5,45 @@ import (
 
 	"github.com/Alfex4936/chulbong-kr/dto"
 	"github.com/Alfex4936/chulbong-kr/service"
+	"go.uber.org/zap"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 )
 
 type SearchHandler struct {
 	SearchService      *service.ZincSearchService
 	BleveSearchService *service.BleveSearchService
+	Logger             *zap.Logger
 }
 
 // NewSearchHandler creates a new SearchHandler with dependencies injected
 func NewSearchHandler(
 	zinc *service.ZincSearchService,
 	bleve *service.BleveSearchService,
+	logger *zap.Logger,
 ) *SearchHandler {
 	return &SearchHandler{
 		SearchService:      zinc,
 		BleveSearchService: bleve,
+		Logger:             logger,
 	}
 }
 
 // RegisterSearchRoutes sets up the routes for search handling within the application.
 func RegisterSearchRoutes(api fiber.Router, handler *SearchHandler) {
 	searchGroup := api.Group("/search")
+	searchGroup.Use(recover.New(recover.Config{
+		EnableStackTrace: true,
+		StackTraceHandler: func(c *fiber.Ctx, e any) {
+			handler.Logger.Error("Panic recovered in search API",
+				zap.Any("error", e),
+				zap.String("url", c.Path()),
+				zap.String("method", c.Method()),
+			)
+		},
+	}))
+
 	{
 		searchGroup.Get("/marker", handler.HandleBleveSearchMarkerAddress)
 		searchGroup.Get("/autocomplete", handler.HandleAutoComplete)

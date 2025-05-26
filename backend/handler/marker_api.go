@@ -23,6 +23,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 )
 
 type MarkerHandler struct {
@@ -53,55 +54,73 @@ func NewMarkerHandler(
 }
 
 func RegisterMarkerRoutes(api fiber.Router, handler *MarkerHandler, authMiddleware *middleware.AuthMiddleware) {
-	api.Get("/markers", handler.HandleGetAllMarkersLocal)
-	// api.Get("/markers2", handler.HandleGetAllMarkersLocalMsgp)
-	// api.Get("/markers-proto", handler.HandleGetAllMarkersProto)
-	api.Get("/markers/new", handler.HandleGetAllNewMarkers)
-
-	api.Get("/markers/:markerId/details", authMiddleware.VerifySoft, handler.HandleGetMarker)
-	api.Get("/markers/:markerID/facilities", handler.HandleGetFacilities)
-	api.Get("/markers/close", handler.HandleFindCloseMarkers)
-	api.Get("/markers/ranking", handler.HandleGetMarkerRanking)
-	api.Get("/markers/unique-ranking", handler.HandleGetUniqueVisitorCount)
-	// api.Get("/markers/unique-ranking/all", handler.HandleGetAllUniqueVisitorCount)
-	api.Get("/markers/area-ranking", handler.HandleGetCurrentAreaMarkerRanking)
-	api.Get("/markers/convert", handler.HandleConvertWGS84ToWCONGNAMUL)
-	api.Get("/markers/location-check", handler.HandleIsInSouthKorea)
-	api.Get("/markers/weather", handler.HandleGetWeatherByWGS84)
-	api.Get("/markers/verify", handler.HandleVerifyMarker)
-
-	api.Get("/markers/new-markers", handler.HandleGetNewMarkers)
-
-	// api.Get("/markers/save-offline-test", handler.HandleTestDynamic)
-	api.Get("/markers/save-offline", limiter.New(limiter.Config{
-		KeyGenerator: func(c *fiber.Ctx) string {
-			return "login-" + handler.MarkerFacadeService.ChatUtil.GetUserIP(c)
+	publicGroup := api.Group("/markers")
+	publicGroup.Use(recover.New(recover.Config{
+		EnableStackTrace: true,
+		StackTraceHandler: func(c *fiber.Ctx, e any) {
+			handler.logger.Error("Panic recovered in public marker API",
+				zap.Any("error", e),
+				zap.String("url", c.Path()),
+				zap.String("method", c.Method()),
+			)
 		},
-		Max:               5,
-		Expiration:        1 * time.Minute,
-		LimiterMiddleware: limiter.SlidingWindow{},
-		// LimiterMiddleware: middleware.SlidingWindow{},
-		LimitReached: func(c *fiber.Ctx) error {
-			// Custom response when rate limit is exceeded
-			c.Set(fiber.HeaderContentType, fiber.MIMETextPlainCharsetUTF8)
-			c.Status(429).SendString("Too many requests, please try again later.")
-			return nil
-		},
-		SkipFailedRequests: false,
-	}), handler.HandleSaveOfflineMap2)
+	}))
 
-	api.Get("/markers/rss", handler.HandleRSS)
-	api.Get("/markers/roadview-date", handler.HandleGetRoadViewPicDate)
+	{
+		// Public routes with recover middleware
+		publicGroup.Get("", handler.HandleGetAllMarkersLocal)
+		// publicGroup.Get("2", handler.HandleGetAllMarkersLocalMsgp)
+		// publicGroup.Get("-proto", handler.HandleGetAllMarkersProto)
+		publicGroup.Get("/new", handler.HandleGetAllNewMarkers)
+		publicGroup.Get("/:markerId/details", authMiddleware.VerifySoft, handler.HandleGetMarker)
+		publicGroup.Get("/:markerID/facilities", handler.HandleGetFacilities)
+		publicGroup.Get("/close", handler.HandleFindCloseMarkers)
+		publicGroup.Get("/ranking", handler.HandleGetMarkerRanking)
+		publicGroup.Get("/unique-ranking", handler.HandleGetUniqueVisitorCount)
+		// publicGroup.Get("/unique-ranking/all", handler.HandleGetAllUniqueVisitorCount)
+		publicGroup.Get("/area-ranking", handler.HandleGetCurrentAreaMarkerRanking)
+		publicGroup.Get("/convert", handler.HandleConvertWGS84ToWCONGNAMUL)
+		publicGroup.Get("/location-check", handler.HandleIsInSouthKorea)
+		publicGroup.Get("/weather", handler.HandleGetWeatherByWGS84)
+		publicGroup.Get("/verify", handler.HandleVerifyMarker)
+		publicGroup.Get("/new-markers", handler.HandleGetNewMarkers)
+		publicGroup.Get("/save-offline", limiter.New(limiter.Config{
+			KeyGenerator: func(c *fiber.Ctx) string {
+				return "login-" + handler.MarkerFacadeService.ChatUtil.GetUserIP(c)
+			},
+			Max:               5,
+			Expiration:        1 * time.Minute,
+			LimiterMiddleware: limiter.SlidingWindow{},
+			LimitReached: func(c *fiber.Ctx) error {
+				c.Set(fiber.HeaderContentType, fiber.MIMETextPlainCharsetUTF8)
+				c.Status(429).SendString("Too many requests, please try again later.")
+				return nil
+			},
+			SkipFailedRequests: false,
+		}), handler.HandleSaveOfflineMap2)
+		publicGroup.Get("/rss", handler.HandleRSS)
+		publicGroup.Get("/roadview-date", handler.HandleGetRoadViewPicDate)
+		publicGroup.Get("/new-pictures", handler.HandleGet10NewPictures)
+		publicGroup.Get("/stories", handler.HandleGetAllStories)
+		publicGroup.Get("/:markerID/stories", authMiddleware.VerifySoft, handler.HandleGetStories)
+	}
 
-	api.Get("/markers/new-pictures", handler.HandleGet10NewPictures)
-
+	// Admin routes (still directly on api router)
 	api.Post("/markers/upload", authMiddleware.CheckAdmin, handler.HandleUploadMarkerPhotoToS3)
 	// api.Post("/markers/refresh", authMiddleware.CheckAdmin, handler.HandleRefreshMarkerCache)
 
-	api.Get("/markers/stories", handler.HandleGetAllStories)
-	api.Get("/markers/:markerID/stories", authMiddleware.VerifySoft, handler.HandleGetStories)
-
 	markerGroup := api.Group("/markers")
+	markerGroup.Use(recover.New(recover.Config{
+		EnableStackTrace: true,
+		StackTraceHandler: func(c *fiber.Ctx, e any) {
+			handler.logger.Error("Panic recovered in authenticated marker API",
+				zap.Any("error", e),
+				zap.String("url", c.Path()),
+				zap.String("method", c.Method()),
+			)
+		},
+	}))
+
 	{
 		markerGroup.Use(authMiddleware.Verify)
 

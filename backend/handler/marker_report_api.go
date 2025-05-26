@@ -10,13 +10,26 @@ import (
 	"github.com/Alfex4936/chulbong-kr/middleware"
 	"github.com/Alfex4936/chulbong-kr/service"
 	"github.com/Alfex4936/chulbong-kr/util"
+	"go.uber.org/zap"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 )
 
 // RegisterReportRoutes sets up the routes for report handling within the application.
 func RegisterReportRoutes(api fiber.Router, handler *MarkerHandler, authMiddleware *middleware.AuthMiddleware) {
 	reportGroup := api.Group("/reports")
+	reportGroup.Use(recover.New(recover.Config{
+		EnableStackTrace: true,
+		StackTraceHandler: func(c *fiber.Ctx, e any) {
+			handler.logger.Error("Panic recovered in report API",
+				zap.Any("error", e),
+				zap.String("url", c.Path()),
+				zap.String("method", c.Method()),
+			)
+		},
+	}))
+
 	{
 		reportGroup.Get("/all", handler.HandleGetAllReports)
 		reportGroup.Get("/marker/:markerID", handler.HandleGetMarkerReports)

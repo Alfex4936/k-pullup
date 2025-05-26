@@ -202,13 +202,21 @@ func (s *MarkerLocationService) IsMarkerInRestrictedArea(lat, long float64) (str
 
 // FindClosestNMarkersWithinDistance
 func (s *MarkerLocationService) FindClosestNMarkersWithinDistance(lat, long float64, distance, pageSize, offset int) ([]dto.MarkerWithDistanceAndPhoto, int, error) {
-	// Calculate bounding box
-	radLat := lat * math.Pi / 180
+	// Calculate bounding box more efficiently
+	radLat := lat * util.RadiansPerDegree
+
+	// Calculate angular distance
 	radDist := float64(distance) / earthRadius
-	minLat := lat - radDist*180/math.Pi
-	maxLat := lat + radDist*180/math.Pi
-	minLon := long - radDist*180/(math.Pi*math.Cos(radLat))
-	maxLon := long + radDist*180/(math.Pi*math.Cos(radLat))
+
+	// Calculate deltas in degrees
+	deltaLat := radDist * util.RadiansToDegrees
+	deltaLon := deltaLat / math.Cos(radLat)
+
+	// Calculate bounds directly
+	minLat := lat - deltaLat
+	maxLat := lat + deltaLat
+	minLon := long - deltaLon
+	maxLon := long + deltaLon
 
 	point := formatPoint(lat, long)
 
