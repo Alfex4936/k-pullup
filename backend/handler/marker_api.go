@@ -184,7 +184,7 @@ func (h *MarkerHandler) HandleGet10NewPictures(c *fiber.Ctx) error {
 	markers, err := h.MarkerFacadeService.GetNew10Pictures()
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "failed to fetch markers",
+			"error": "failed to fetch markers " + err.Error(),
 		})
 	}
 	return c.JSON(markers)

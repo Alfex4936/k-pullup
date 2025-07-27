@@ -76,13 +76,14 @@ type AuthService struct {
 	OAuthConfig *config.OAuthConfig
 	TokenUtil   *util.TokenUtil
 	HTTPClient  *http.Client
+	ChatUtil    *util.ChatUtil
 
 	fetchTokenStmt  *sqlx.Stmt
 	profileStmt     *sqlx.Stmt
 	verifyTokenStmt *sqlx.Stmt
 }
 
-func NewAuthService(db *sqlx.DB, config *config.AppConfig, oconfig *config.OAuthConfig, tokenUtil *util.TokenUtil, httpClient *http.Client) *AuthService {
+func NewAuthService(db *sqlx.DB, config *config.AppConfig, oconfig *config.OAuthConfig, tokenUtil *util.TokenUtil, httpClient *http.Client, chatUtil *util.ChatUtil) *AuthService {
 	// Prepare the statements
 	fetchTokenStmt, _ := db.Preparex(fetchTokenQuery)
 	profileStmt, _ := db.Preparex(profileQuery)
@@ -94,6 +95,7 @@ func NewAuthService(db *sqlx.DB, config *config.AppConfig, oconfig *config.OAuth
 		OAuthConfig: oconfig,
 		TokenUtil:   tokenUtil,
 		HTTPClient:  httpClient,
+		ChatUtil:    chatUtil,
 
 		fetchTokenStmt:  fetchTokenStmt,
 		profileStmt:     profileStmt,
@@ -223,9 +225,8 @@ func (s *AuthService) SaveOAuthUser(provider string, providerID string, email st
 		return nil, errors.New("email and username are required")
 	}
 
-	if username == "" {
-		username = strings.Split(email, "@")[0]
-	}
+	// Generate a random Korean nickname instead of using the OAuth username
+	randomNickname := s.ChatUtil.GenerateUsernameForAuth()
 
 	tx, err := s.DB.Beginx()
 	if err != nil {
@@ -243,9 +244,10 @@ func (s *AuthService) SaveOAuthUser(provider string, providerID string, email st
 		// New user
 		const maxRetries = 5
 		for i := 0; i < maxRetries; i++ {
-			uniqueUsername := username
+			uniqueUsername := randomNickname
 			if i > 0 {
-				uniqueUsername = username + "_" + s.TokenUtil.GenerateRandomString(4)
+				// If collision, generate a new random nickname
+				uniqueUsername = s.ChatUtil.GenerateUsernameForAuth()
 			}
 
 			_, err = tx.Exec(insertNewUserQuery, uniqueUsername, email, provider, providerID)
@@ -262,14 +264,25 @@ func (s *AuthService) SaveOAuthUser(provider string, providerID string, email st
 			return nil, fmt.Errorf("failed to insert user after retries: %w", err)
 		}
 	} else {
-		// Existing user
-		if user.Username != username {
-			// Update username and ProviderID
+		// Existing user - don't change username unless it's one of the restricted names
+		currentUsername := user.Username
+		shouldUpdateUsername := false
+
+		// Check if current username needs to be replaced
+		for restrictedName := range nameReplacements {
+			if strings.Contains(strings.ToLower(currentUsername), strings.ToLower(restrictedName)) {
+				shouldUpdateUsername = true
+				break
+			}
+		}
+
+		if shouldUpdateUsername {
+			// Update username and ProviderID with a new random nickname
 			const maxRetries = 5
 			for i := 0; i < maxRetries; i++ {
-				uniqueUsername := username
+				uniqueUsername := randomNickname
 				if i > 0 {
-					uniqueUsername = username + "_" + s.TokenUtil.GenerateRandomString(4)
+					uniqueUsername = s.ChatUtil.GenerateUsernameForAuth()
 				}
 
 				_, err = tx.Exec(updateUserProviderIDAndUsernameQuery, uniqueUsername, providerID, email, provider)

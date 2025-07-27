@@ -1,10 +1,13 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/xml"
 	"fmt"
+	"image"
+	"io"
 	"mime/multipart"
 	"os"
 	"strings"
@@ -137,9 +140,10 @@ LIMIT ? OFFSET ?`
 	// Query to get the total count of markers for the user
 	getTotalCountofMarkerQuery = "SELECT COUNT(DISTINCT Markers.MarkerID) FROM Markers WHERE Markers.UserID = ?"
 
-	insertMarkerQuery         = "INSERT INTO Markers (UserID, Location, Description, CreatedAt, UpdatedAt) VALUES (?, ST_PointFromText(?, 4326), ?, NOW(), NOW())"
-	insertPhotoQuery          = "INSERT INTO Photos (MarkerID, PhotoURL, UploadedAt) VALUES (?, ?, NOW())"
-	insertPhotoWithThumbQuery = "INSERT INTO Photos (MarkerID, PhotoURL, ThumbnailURL, UploadedAt) VALUES (?, ?, ?, NOW())"
+	insertMarkerQuery = "INSERT INTO Markers (UserID, Location, Description, CreatedAt, UpdatedAt) VALUES (?, ST_PointFromText(?, 4326), ?, NOW(), NOW())"
+	insertPhotoQuery  = "INSERT INTO Photos (MarkerID, PhotoURL, UploadedAt) VALUES (?, ?, NOW())"
+	// insertPhotoWithThumbQuery = "INSERT INTO Photos (MarkerID, PhotoURL, ThumbnailURL, UploadedAt) VALUES (?, ?, ?, NOW())"
+	insertPhotoWithThumbQuery = "INSERT INTO Photos (MarkerID, PhotoURL, ThumbnailURL, Blurhash, UploadedAt) VALUES (?, ?, ?, ?, NOW())"
 
 	deleteMarkerQuery = "DELETE FROM Markers WHERE MarkerID = ?"
 
@@ -167,7 +171,8 @@ ORDER BY distance ASC`
 
 	generateRSSQuery = "SELECT MarkerID, UpdatedAt, Address FROM Markers ORDER BY UpdatedAt DESC"
 
-	getNewTop10PicturesQuery      = "SELECT MarkerID, COALESCE(ThumbnailURL, PhotoURL) AS PhotoURL FROM Photos GROUP BY MarkerID, PhotoURL ORDER BY MAX(UploadedAt) DESC LIMIT 10"
+	// getNewTop10PicturesQuery      = "SELECT MarkerID, COALESCE(ThumbnailURL, PhotoURL) AS PhotoURL FROM Photos GROUP BY MarkerID, PhotoURL ORDER BY MAX(UploadedAt) DESC LIMIT 10"
+	getNewTop10PicturesQuery      = "SELECT MarkerID, COALESCE(ThumbnailURL, PhotoURL) AS PhotoURL, COALESCE(Blurhash, '') AS Blurhash FROM Photos WHERE (MarkerID, UploadedAt) IN ( SELECT MarkerID, MAX(UploadedAt) FROM Photos GROUP BY MarkerID ) ORDER BY UploadedAt DESC LIMIT 10"
 	getNewTop10PicturesExtraQuery = `
 SELECT p.MarkerID, COALESCE(p.ThumbnailURL, p.PhotoURL) As PhotoURL, m.Address, ST_X(m.Location) AS Latitude, ST_Y(m.Location) AS Longitude
 FROM Photos p
@@ -534,8 +539,8 @@ func (s *MarkerManageService) CreateMarkerWithPhotos(ctx context.Context, marker
 	wg.Add(len(files))
 
 	// Submit the tasks to the worker pool
-	for _, file := range files {
-		file := file // capture loop variable
+	for _, fileHeader := range files {
+		fileHeader := fileHeader // capture loop variable
 
 		s.workerPool.Submit(func() {
 			defer wg.Done()
@@ -545,7 +550,7 @@ func (s *MarkerManageService) CreateMarkerWithPhotos(ctx context.Context, marker
 			defer taskCancel()
 
 			// Upload the file to S3 using a context-aware method.
-			fileURL, thumbnailURL, err := s.S3Service.UploadFileToS3WithContext(perTaskCtx, folder, file, true)
+			fileURL, thumbnailURL, err := s.S3Service.UploadFileToS3WithContext(perTaskCtx, folder, fileHeader, true)
 			if err != nil {
 				select {
 				case errorChan <- fmt.Errorf("S3 upload failed: %w", err):
@@ -554,8 +559,24 @@ func (s *MarkerManageService) CreateMarkerWithPhotos(ctx context.Context, marker
 				return
 			}
 
+			file, _ := fileHeader.Open()
+			defer file.Close()
+
+			buf := new(bytes.Buffer)
+			_, _ = io.Copy(buf, file)
+			rawBytes := buf.Bytes()
+			img, _, err := image.Decode(bytes.NewReader(rawBytes))
+			if err != nil {
+				select {
+				case errorChan <- fmt.Errorf(" 이미지 디코딩 실패: %w", err):
+				default:
+				}
+				return
+			}
+			blurhashString := util.EncodeBlurHashImage(img, 6, 5)
+
 			// Insert photo into the database
-			if _, err := tx.Exec(insertPhotoWithThumbQuery, markerID, fileURL, thumbnailURL); err != nil {
+			if _, err := tx.Exec(insertPhotoWithThumbQuery, markerID, fileURL, thumbnailURL, blurhashString); err != nil {
 				select {
 				case errorChan <- err:
 				default:

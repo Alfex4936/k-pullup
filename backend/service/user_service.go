@@ -17,11 +17,13 @@ import (
 )
 
 const (
-	getUserById               = "SELECT UserID, Username, Email, Provider FROM Users WHERE UserID = ?"
-	checkWebsiteUserById      = "SELECT EXISTS(SELECT 1 FROM Users WHERE UserID = ? AND Provider = 'website')"
-	getManyDetailsUserByEmail = "SELECT UserID, Username, Email, PasswordHash, Provider, ProviderID, CreatedAt, UpdatedAt FROM Users WHERE Email = ? AND Provider = 'website'"
-	getUserByUsernameQuery    = "SELECT UserID FROM Users WHERE Username = ?"
-	getAllReportsByUserQuery  = `
+	findUserExistenceAndProviderQuery = "SELECT EXISTS(SELECT 1 FROM Users WHERE UserID = ?) as exists, COALESCE(Provider, '') as provider FROM Users WHERE UserID = ?"
+	getUserById                       = "SELECT UserID, Username, Email, Provider FROM Users WHERE UserID = ?"
+	checkWebsiteUserById              = "SELECT EXISTS(SELECT 1 FROM Users WHERE UserID = ? AND Provider = 'website')"
+	getManyDetailsUserByEmail         = "SELECT UserID, Username, Email, PasswordHash, Provider, ProviderID, CreatedAt, UpdatedAt FROM Users WHERE Email = ? AND Provider = 'website'"
+	getUserByUsernameQuery            = "SELECT UserID FROM Users WHERE Username = ?"
+	userGetEmailQuery                 = "SELECT UserID FROM Users WHERE Email = ? AND Provider = 'website'" // Renamed to avoid conflict with auth service
+	getAllReportsByUserQuery          = `
 SELECT r.ReportID, r.MarkerID, r.UserID, ST_X(r.Location) AS Latitude, ST_Y(r.Location) AS Longitude,
 ST_X(r.NewLocation) AS NewLatitude, ST_Y(r.NewLocation) AS NewLongitude,
 r.Description, r.CreatedAt, r.Status, r.DoesExist, m.Address, p.PhotoURL
@@ -105,14 +107,16 @@ var ContributionLevelNames = []struct {
 }
 
 type UserService struct {
-	DB        *sqlx.DB
-	S3Service *S3Service
+	DB          *sqlx.DB
+	S3Service   *S3Service
+	BadWordUtil *util.BadWordUtil
 }
 
-func NewUserService(db *sqlx.DB, s3Service *S3Service) *UserService {
+func NewUserService(db *sqlx.DB, s3Service *S3Service, badWordUtil *util.BadWordUtil) *UserService {
 	return &UserService{
-		DB:        db,
-		S3Service: s3Service,
+		DB:          db,
+		S3Service:   s3Service,
+		BadWordUtil: badWordUtil,
 	}
 }
 
@@ -158,28 +162,59 @@ func (s *UserService) UpdateUserProfile(userID int, updateReq *dto.UpdateUserReq
 	}
 	defer tx.Rollback()
 
-	// Check if the user is registered within the website
-	var exists bool
-	err = tx.Get(&exists, checkWebsiteUserById, userID)
-	if err != nil || !exists {
-		return nil, fmt.Errorf("no user found with userID %d registered on the website", userID)
+	// Check if the user exists (allow both website and oauth users)
+	var user struct {
+		Exists   bool   `db:"exists"`
+		Provider string `db:"provider"`
+	}
+	err = tx.Get(&user, findUserExistenceAndProviderQuery, userID, userID)
+	if err != nil || !user.Exists {
+		return nil, fmt.Errorf("no user found with userID %d", userID)
 	}
 
 	if updateReq.Username != nil {
 		normalizedUsername := strings.TrimSpace(SegmentConsonants(*updateReq.Username))
-		var existingID int
-		err = tx.Get(&existingID, getUserByUsernameQuery, normalizedUsername)
-		if err == nil || err != sql.ErrNoRows {
-			return nil, fmt.Errorf("username %s is already in use", normalizedUsername)
+
+		// Replace restricted names with their replacements
+		cleanedUsername := normalizedUsername
+		lowerUsername := strings.ToLower(cleanedUsername)
+		for restrictedName, replacement := range nameReplacements {
+			if strings.Contains(lowerUsername, strings.ToLower(restrictedName)) {
+				cleanedUsername = strings.ReplaceAll(cleanedUsername, restrictedName, replacement)
+				lowerUsername = strings.ToLower(cleanedUsername) // Update for next iteration
+			}
 		}
-		*updateReq.Username = normalizedUsername
+
+		// Check and replace bad words
+		cleanedUsername, err := s.BadWordUtil.ReplaceBadWords(cleanedUsername)
+		if err != nil {
+			return nil, fmt.Errorf("error checking username for bad words: %w", err)
+		}
+
+		// Check if username already exists
+		var existingID int
+		err = tx.Get(&existingID, getUserByUsernameQuery, cleanedUsername)
+		if err == nil || err != sql.ErrNoRows {
+			return nil, fmt.Errorf("username %s is already in use", cleanedUsername)
+		}
+		*updateReq.Username = cleanedUsername
 	}
 
+	// Only allow email and password updates for website users
 	if updateReq.Email != nil {
+		if user.Provider != "website" {
+			return nil, fmt.Errorf("email updates are only allowed for website users")
+		}
 		var existingID int
-		err = tx.Get(&existingID, getUserEmailQuery, *updateReq.Email)
+		err = tx.Get(&existingID, userGetEmailQuery, *updateReq.Email)
 		if err == nil || err != sql.ErrNoRows {
 			return nil, fmt.Errorf("email %s is already in use", *updateReq.Email)
+		}
+	}
+
+	if updateReq.Password != nil {
+		if user.Provider != "website" {
+			return nil, fmt.Errorf("password updates are only allowed for website users")
 		}
 	}
 
@@ -191,12 +226,12 @@ func (s *UserService) UpdateUserProfile(userID int, updateReq *dto.UpdateUserReq
 		args = append(args, *updateReq.Username)
 	}
 
-	if updateReq.Email != nil {
+	if updateReq.Email != nil && user.Provider == "website" {
 		setParts = append(setParts, "Email = ?")
 		args = append(args, *updateReq.Email)
 	}
 
-	if updateReq.Password != nil {
+	if updateReq.Password != nil && user.Provider == "website" {
 		hashedPassword, hashErr := bcrypt.GenerateFromPassword(util.StringToBytes(*updateReq.Password), bcrypt.DefaultCost)
 		if hashErr != nil {
 			return nil, hashErr

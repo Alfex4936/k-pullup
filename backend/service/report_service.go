@@ -1,14 +1,18 @@
 package service
 
 import (
+	"bytes"
+	"context"
 	"errors"
 	"fmt"
+	"image"
+	"io"
 	"mime/multipart"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/Alfex4936/chulbong-kr/dto"
+	"github.com/Alfex4936/chulbong-kr/util"
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 )
@@ -102,8 +106,8 @@ SET Markers.Location = COALESCE(Reports.NewLocation, Markers.Location),
 WHERE Reports.ReportID = ? AND Reports.Status = 'APPROVED'	`
 
 	updateReportPhotoQuery = `
-INSERT INTO Photos (MarkerID, PhotoURL, UploadedAt)
-SELECT r.MarkerID, rp.PhotoURL, rp.UploadedAt
+INSERT INTO Photos (MarkerID, PhotoURL, ThumbnailURL, Blurhash, UploadedAt)
+SELECT r.MarkerID, rp.PhotoURL, rp.ThumbnailURL, rp.Blurhash, rp.UploadedAt
 FROM ReportPhotos rp
 JOIN Reports r ON rp.ReportID = r.ReportID
 WHERE r.ReportID = ? AND r.Status = 'APPROVED'
@@ -262,54 +266,12 @@ func (s *ReportService) CreateReport(report *dto.MarkerReportRequest, form *mult
 		return ErrNoPhotos
 	}
 
-	// Channels for collecting file URLs and errors
-	fileURLChan := make(chan string, len(files))
-	errorChan := make(chan error, len(files))
-
-	var wg sync.WaitGroup
-
-	// Concurrently upload files to S3
-	for _, file := range files {
-		wg.Add(1)
-		go func(file *multipart.FileHeader) {
-			defer wg.Done()
-			// TODO: Make thumbnail for report photos too
-			fileURL, _, err := s.S3Service.UploadFileToS3("reports", file, true)
-			if err != nil {
-				errorChan <- fmt.Errorf("%w: %v", ErrFileUpload, err)
-				return
-			}
-			fileURLChan <- fileURL
-		}(file)
-	}
-
-	// Wait for all uploads to finish
-	wg.Wait()
-	close(fileURLChan)
-	close(errorChan)
-
-	// Check for errors in file uploads
-	if len(errorChan) > 0 {
-		// Collect all errors
-		var uploadErrors []string
-		for err := range errorChan {
-			uploadErrors = append(uploadErrors, err.Error())
-		}
-		return fmt.Errorf("file upload errors: %s", strings.Join(uploadErrors, "; "))
-	}
-
-	// Collect all uploaded file URLs
-	fileURLs := make([]string, 0, len(files))
-	for url := range fileURLChan {
-		fileURLs = append(fileURLs, url)
-	}
-
 	// Begin a transaction for database operations
 	tx, err := s.DB.Beginx()
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrBeginTransaction, err)
 	}
-	defer tx.Rollback() // Ensure the transaction is rolled back in case of error
+	defer tx.Rollback()
 
 	// Insert the main report record
 	point := formatPoint(report.Latitude, report.Longitude)
@@ -325,11 +287,71 @@ func (s *ReportService) CreateReport(report *dto.MarkerReportRequest, form *mult
 		return fmt.Errorf("%w: %v", ErrLastInsertID, err)
 	}
 
-	// Insert photo URLs into the database
-	for _, fileURL := range fileURLs {
-		if _, err := tx.Exec(insertReportPhotoQuery, reportID, fileURL); err != nil {
-			return fmt.Errorf("%w: %v", ErrInsertReportPhoto, err)
-		}
+	folder := fmt.Sprintf("reports/%d", reportID)
+
+	// Create a cancellable context for the worker tasks.
+	taskCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Channel to collect errors
+	errorChan := make(chan error, 1)
+
+	var wg sync.WaitGroup
+	wg.Add(len(files))
+
+	// Process files concurrently
+	for _, fileHeader := range files {
+		fileHeader := fileHeader // capture loop variable
+
+		go func() {
+			defer wg.Done()
+
+			// Upload the file to S3 with thumbnail
+			fileURL, thumbnailURL, err := s.S3Service.UploadFileToS3WithContext(taskCtx, folder, fileHeader, true)
+			if err != nil {
+				select {
+				case errorChan <- fmt.Errorf("S3 upload failed: %w", err):
+				default:
+				}
+				return
+			}
+
+			// Generate blurhash
+			file, _ := fileHeader.Open()
+			defer file.Close()
+
+			buf := new(bytes.Buffer)
+			_, _ = io.Copy(buf, file)
+			rawBytes := buf.Bytes()
+			img, _, err := image.Decode(bytes.NewReader(rawBytes))
+			if err != nil {
+				select {
+				case errorChan <- fmt.Errorf("image decoding failed: %w", err):
+				default:
+				}
+				return
+			}
+			blurhashString := util.EncodeBlurHashImage(img, 6, 5)
+
+			// Insert photo with thumbnail and blurhash
+			if _, err := tx.Exec("INSERT INTO ReportPhotos (ReportID, PhotoURL, ThumbnailURL, Blurhash) VALUES (?, ?, ?, ?)",
+				reportID, fileURL, thumbnailURL, blurhashString); err != nil {
+				select {
+				case errorChan <- err:
+				default:
+				}
+				return
+			}
+		}()
+	}
+
+	// Wait for all jobs to finish
+	wg.Wait()
+	close(errorChan)
+
+	// Check for errors
+	if err, ok := <-errorChan; ok {
+		return fmt.Errorf("encountered an error during file upload or DB operation: %v", err)
 	}
 
 	// Commit the transaction after all operations succeed
@@ -428,6 +450,8 @@ func (s *ReportService) UpdateMarkerWithReportDetailsTx(tx *sqlx.Tx, reportID in
 	if _, err := tx.Exec(updateMarkeryReportQuery, reportID); err != nil {
 		return fmt.Errorf("error updating marker with report details: %w", err)
 	}
+
+	// TODO gotta blurhash
 
 	// Move approved report photos to the Photos table
 	if _, err := tx.Exec(updateReportPhotoQuery, reportID); err != nil {
