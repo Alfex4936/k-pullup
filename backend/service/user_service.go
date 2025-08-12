@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	findUserExistenceAndProviderQuery = "SELECT EXISTS(SELECT 1 FROM Users WHERE UserID = ?) as exists, COALESCE(Provider, '') as provider FROM Users WHERE UserID = ?"
+	findUserExistenceAndProviderQuery = "SELECT 1 as exist, COALESCE(Provider, '') as provider FROM Users WHERE UserID = ?"
 	getUserById                       = "SELECT UserID, Username, Email, Provider FROM Users WHERE UserID = ?"
 	checkWebsiteUserById              = "SELECT EXISTS(SELECT 1 FROM Users WHERE UserID = ? AND Provider = 'website')"
 	getManyDetailsUserByEmail         = "SELECT UserID, Username, Email, PasswordHash, Provider, ProviderID, CreatedAt, UpdatedAt FROM Users WHERE Email = ? AND Provider = 'website'"
@@ -164,12 +164,15 @@ func (s *UserService) UpdateUserProfile(userID int, updateReq *dto.UpdateUserReq
 
 	// Check if the user exists (allow both website and oauth users)
 	var user struct {
-		Exists   bool   `db:"exists"`
+		Exists   int    `db:"exist"`
 		Provider string `db:"provider"`
 	}
-	err = tx.Get(&user, findUserExistenceAndProviderQuery, userID, userID)
-	if err != nil || !user.Exists {
-		return nil, fmt.Errorf("no user found with userID %d", userID)
+	err = tx.Get(&user, findUserExistenceAndProviderQuery, userID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("no user found with userID %d", userID)
+		}
+		return nil, fmt.Errorf("error checking user existence: %w", err)
 	}
 
 	if updateReq.Username != nil {

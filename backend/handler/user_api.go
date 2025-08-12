@@ -93,7 +93,7 @@ func (h *UserHandler) HandleUpdateUser(c *fiber.Ctx) error {
 
 	user, err := h.UserFacadeService.UpdateUserProfile(userData.UserID, &updateReq)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not update user profile"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not update user profile" + err.Error()})
 	}
 
 	// Marshal the updated user profile to byte array
