@@ -1,0 +1,1747 @@
+repo_name: Alfex4936/chulbong-kr
+report_id: 3841a4aa599b9dbe8510c0908f825135
+version: 0.1
+repo_type: Public
+timestamp: '2024-06-12T15:42:22+00:00'
+requested_by: 2YH02
+provider: github
+branch: main
+detected_tools_count: 129
+tools:
+- name: Assembly Language
+  description: A low-level programming language
+  website_url: https://en.wikipedia.org/wiki/Assembly_language
+  open_source: true
+  hosted_saas: false
+  category: Languages & Frameworks
+  sub_category: Languages
+  image_url: https://img.stackshare.io/service/4934/default_71f18bbdc61fb88cefb66415bb55dc6f1e60e5ec.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr
+  detection_source: Repo Metadata
+- name: Golang
+  description: An open source programming language that makes it easy to build simple,
+    reliable, and efficient software
+  website_url: http://golang.org/
+  license: BSD-3-Clause
+  open_source: true
+  hosted_saas: false
+  category: Languages & Frameworks
+  sub_category: Languages
+  image_url: https://img.stackshare.io/service/1005/O6AczwfV_400x400.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr
+  detection_source: Repo Metadata
+- name: Java
+  description: A concurrent, class-based, object-oriented, language specifically designed
+    to have as few implementation dependencies as possible
+  website_url: https://www.java.com
+  open_source: true
+  hosted_saas: false
+  category: Languages & Frameworks
+  sub_category: Languages
+  image_url: https://img.stackshare.io/service/995/K85ZWV2F.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr
+  detection_source: Repo Metadata
+- name: JavaScript
+  description: Lightweight, interpreted, object-oriented language with first-class
+    functions
+  website_url: https://developer.mozilla.org/en-US/docs/Web/JavaScript
+  open_source: true
+  hosted_saas: false
+  category: Languages & Frameworks
+  sub_category: Languages
+  image_url: https://img.stackshare.io/service/1209/javascript.jpeg
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr
+  detection_source: Repo Metadata
+- name: Python
+  description: A clear and powerful object-oriented programming language, comparable
+    to Perl, Ruby, Scheme, or Java.
+  website_url: https://www.python.org
+  open_source: true
+  hosted_saas: false
+  category: Languages & Frameworks
+  sub_category: Languages
+  image_url: https://img.stackshare.io/service/993/pUBY5pVj.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr
+  detection_source: Repo Metadata
+- name: TypeScript
+  description: A superset of JavaScript that compiles to clean JavaScript output
+  website_url: http://www.typescriptlang.org
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Languages & Frameworks
+  sub_category: Languages
+  image_url: https://img.stackshare.io/service/1612/bynNY5dJ.jpg
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr
+  detection_source: Repo Metadata
+- name: Autoprefixer
+  description: PostCSS plugin to parse CSS and add vendor prefixes to CSS rules
+  website_url: https://github.com/postcss/autoprefixer
+  open_source: false
+  hosted_saas: false
+  category: Languages & Frameworks
+  sub_category: CSS Pre-processors / Extensions
+  image_url: https://img.stackshare.io/service/2202/72d087642cfce6fef6f2dabec5bf49e8_400x400.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/frontend/package.json
+  detection_source: frontend/package.json
+  last_updated_by: 2YH02
+  last_updated_on: 2024-04-15 13:21:32.000000000 Z
+- name: Echo
+  description: High performance, extensible, minimalist Go web framework
+  website_url: https://echo.labstack.com
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Languages & Frameworks
+  sub_category: Microframeworks (Backend)
+  image_url: https://img.stackshare.io/service/4996/9P0MlumU_400x400.jpg
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/go.mod
+  detection_source: go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-02-12 04:40:57.000000000 Z
+- name: Next.js
+  description: A small framework for server-rendered universal JavaScript apps
+  website_url: https://nextjs.org/
+  version: 14.1.4
+  open_source: true
+  hosted_saas: false
+  category: Languages & Frameworks
+  sub_category: Frameworks (Full Stack)
+  image_url: https://img.stackshare.io/service/5936/nextjs.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/frontend/package-lock.json
+  detection_source: frontend/package.json
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-02-12 04:40:57.000000000 Z
+- name: Node.js
+  description: A platform built on Chrome's JavaScript runtime for easily building
+    fast, scalable network applications
+  website_url: http://nodejs.org/
+  open_source: true
+  hosted_saas: false
+  category: Languages & Frameworks
+  sub_category: Frameworks (Full Stack)
+  image_url: https://img.stackshare.io/service/1011/n1JRsFeB_400x400.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/frontend/package.json
+  detection_source: frontend/package.json
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-02-12 04:40:57.000000000 Z
+- name: PostCSS
+  description: Transform CSS with JS plugins
+  website_url: https://github.com/postcss/postcss
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Languages & Frameworks
+  sub_category: CSS Pre-processors / Extensions
+  image_url: https://img.stackshare.io/service/3339/rlFcjEdI.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/frontend/package.json
+  detection_source: frontend/package.json
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-02-12 04:40:57.000000000 Z
+- name: Protobuf
+  description: Google's data interchange format
+  website_url: https://developers.google.com/protocol-buffers/
+  open_source: true
+  hosted_saas: false
+  category: Languages & Frameworks
+  sub_category: Serialization Frameworks
+  image_url: https://img.stackshare.io/service/4393/ma2jqJKH_400x400.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/bleve/go.mod
+  detection_source: backend/bleve/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-01 06:34:02.000000000 Z
+- name: React
+  description: A JavaScript library for building user interfaces
+  website_url: https://reactjs.org/
+  version: 18.2.0
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Javascript UI Libraries
+  image_url: https://img.stackshare.io/service/1020/OYIaJ1KK.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/frontend/package-lock.json
+  detection_source: frontend/package.json
+  last_updated_by: 2YH02
+  last_updated_on: 2024-05-24 14:11:32.000000000 Z
+- name: Spring Framework
+  description: An application framework and inversion of control container for the
+    Java platform
+  website_url: https://spring.io/projects/spring-framework
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Languages & Frameworks
+  sub_category: Frameworks (Full Stack)
+  image_url: https://img.stackshare.io/service/2006/spring-framework-project-logo.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend-spring/build.gradle
+  detection_source: backend-spring/build.gradle
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-05-16 14:15:33.000000000 Z
+- name: Tailwind CSS
+  description: A utility-first CSS framework for rapid UI development
+  website_url: https://tailwindcss.com
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Languages & Frameworks
+  sub_category: Front-End Frameworks
+  image_url: https://img.stackshare.io/service/8158/default_660b7c41c3ba489cb581eec89c04655404258c19.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/frontend/package.json
+  detection_source: frontend/package.json
+  last_updated_by: 2YH02
+  last_updated_on: 2024-04-15 13:21:32.000000000 Z
+- name: Zustand
+  description: Bear necessities for state management in React
+  website_url: https://github.com/react-spring/zustand
+  version: 3.7.2
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Monitoring for Analytics
+  image_url: https://img.stackshare.io/service/11559/zustand.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/frontend/package-lock.json
+  detection_source: frontend/package.json
+  last_updated_by: 2YH02
+  last_updated_on: 2024-04-15 13:21:32.000000000 Z
+- name: gRPC
+  description: A high performance, open-source universal RPC framework
+  website_url: https://grpc.io/
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Languages & Frameworks
+  sub_category: Remote Procedure Call (RPC)
+  image_url: https://img.stackshare.io/service/4670/default_d811b0ac72205af84aca21f967594338580be913.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/go.mod
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-02-13 04:56:32.000000000 Z
+- name: MongoDB
+  description: The database for giant ideas
+  website_url: http://www.mongodb.com/
+  open_source: true
+  hosted_saas: false
+  category: Data Stores
+  sub_category: Databases
+  image_url: https://img.stackshare.io/service/1030/leaf-360x360.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/go.mod
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-04-15 12:50:35.000000000 Z
+- name: MySQL
+  description: The world's most popular open source database
+  website_url: http://www.mysql.com
+  open_source: true
+  hosted_saas: false
+  category: Data Stores
+  sub_category: Databases
+  image_url: https://img.stackshare.io/service/1025/logo-mysql-170x170.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/go.mod
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-02-13 04:56:32.000000000 Z
+- name: ESLint
+  description: The fully pluggable JavaScript code quality tool
+  website_url: http://eslint.org/
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Build, Test, Deploy
+  sub_category: Code Review
+  image_url: https://img.stackshare.io/service/3337/Q4L7Jncy.jpg
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/frontend/package.json
+  detection_source: frontend/package.json
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-02-12 04:40:57.000000000 Z
+- name: Git
+  description: Fast, scalable, distributed revision control system
+  website_url: http://git-scm.com/
+  open_source: true
+  hosted_saas: false
+  category: Build, Test, Deploy
+  sub_category: Version Control System
+  image_url: https://img.stackshare.io/service/1046/git.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr
+  detection_source: Repo Metadata
+- name: GitHub Actions
+  description: Automate your workflow from idea to production
+  website_url: https://github.com/features/actions
+  open_source: false
+  hosted_saas: true
+  category: Build, Test, Deploy
+  sub_category: Continuous Integration
+  image_url: https://img.stackshare.io/service/11563/actions.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/.github/workflows/dispatch-trigger.yml
+  detection_source: ".github/workflows/dispatch-trigger.yml"
+  last_updated_by: seok
+  last_updated_on: 2024-04-14 06:36:06.000000000 Z
+- name: Gradle
+  description: A powerful build system for the JVM
+  website_url: https://www.gradle.org/
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Build, Test, Deploy
+  sub_category: Java Build Tools
+  image_url: https://img.stackshare.io/service/975/gradlephant-social-black-bg.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend-spring/build.gradle
+  detection_source: backend-spring/build.gradle
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-05-09 09:05:35.000000000 Z
+- name: Mockito
+  description: Tasty mocking framework for unit tests in Java
+  website_url: https://site.mockito.org/
+  version: 5.12.0
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Build, Test, Deploy
+  sub_category: Testing Frameworks
+  image_url: https://img.stackshare.io/service/2021/4y634TJm_400x400.jpg
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend-spring/build.gradle
+  detection_source: backend-spring/build.gradle
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-05-16 14:15:33.000000000 Z
+- name: OpenCensus
+  description: A single distribution of libraries that automatically collect traces
+    and send them to any backend
+  website_url: https://opencensus.io/
+  open_source: false
+  hosted_saas: false
+  category: Monitoring
+  sub_category: Performance Monitoring
+  image_url: https://img.stackshare.io/service/10794/EpBd2Xrw_400x400.jpg
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/bleve/go.mod
+  detection_source: backend/bleve/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-01 06:34:02.000000000 Z
+- name: Testify
+  description: A toolkit with common assertions and mocks that plays nicely with the
+    standard library
+  website_url: https://github.com/stretchr/testify
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Build, Test, Deploy
+  sub_category: Go Testing
+  image_url: https://img.stackshare.io/service/8695/stretchr.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/go.mod
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-04-08 06:03:15.000000000 Z
+- name: npm
+  description: The package manager for JavaScript.
+  website_url: https://www.npmjs.com/
+  open_source: false
+  hosted_saas: false
+  category: Build, Test, Deploy
+  sub_category: Front End Package Manager
+  image_url: https://img.stackshare.io/service/1120/lejvzrnlpb308aftn31u.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/frontend/package.json
+  detection_source: frontend/package.json
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-02-12 04:40:57.000000000 Z
+- name: Apache Camel
+  description: A versatile open source integration framework
+  website_url: https://camel.apache.org/
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Application Hosting
+  sub_category: Platform as a Service
+  image_url: https://img.stackshare.io/service/3276/xWt1RFo6_400x400.jpg
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend-spring/src/main/resources/application.yml
+  detection_source: backend-spring/src/main/resources/application.yml
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-05-09 09:05:35.000000000 Z
+- name: Vercel
+  description: It makes serverless application deployment easy
+  website_url: https://vercel.com/
+  open_source: false
+  hosted_saas: true
+  category: Application Utilities
+  sub_category: Static Web Hosting
+  image_url: https://img.stackshare.io/service/7618/bHjpwZem_400x400.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/frontend/vercel.json
+  detection_source: frontend/vercel.json
+  last_updated_by: 2YH02
+  last_updated_on: 2024-04-22 13:38:15.000000000 Z
+- name: PowerShell
+  description: A task automation and configuration management framework
+  website_url: https://docs.microsoft.com/en-us/powershell/
+  open_source: false
+  hosted_saas: false
+  category: Languages & Frameworks
+  sub_category: Languages
+  image_url: https://img.stackshare.io/service/3681/powershell-logo.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr
+  detection_source: Repo Metadata
+- name: Shell
+  description: A shell is a text-based terminal, used for manipulating programs and
+    files. Shell scripts typically manage program execution.
+  website_url: https://en.wikipedia.org/wiki/Shell_script
+  open_source: false
+  hosted_saas: false
+  category: Languages & Frameworks
+  sub_category: Languages
+  image_url: https://img.stackshare.io/service/4631/default_c2062d40130562bdc836c13dbca02d318205a962.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr
+  detection_source: Repo Metadata
+- name: Zod
+  description: TypeScript-first schema validation
+  website_url: https://zod.dev/
+  open_source: false
+  hosted_saas: false
+  image_url: https://img.stackshare.io/service/48521/default_eea961e4c374e68a1c7eb5bbc9e4a39920890342.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/frontend/package.json
+  detection_source: frontend/package.json
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-02-12 04:40:57.000000000 Z
+- name: axios
+  description: Promise based HTTP client for the browser and node.js
+  website_url: https://github.com/mzabriskie/axios
+  version: 1.6.8
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Javascript Utilities & Libraries
+  image_url: https://img.stackshare.io/no-img-open-source.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/frontend/package-lock.json
+  detection_source: frontend/package.json
+  last_updated_by: 2YH02
+  last_updated_on: 2024-04-15 13:21:32.000000000 Z
+- name: three.js
+  description: A JavaScript 3D library
+  website_url: https://threejs.org/
+  version: 0.164.1
+  open_source: true
+  hosted_saas: false
+  category: Languages & Frameworks
+  sub_category: Game Development
+  image_url: https://img.stackshare.io/service/5883/preview.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/frontend/package-lock.json
+  detection_source: frontend/package.json
+  last_updated_by: 2YH02
+  last_updated_on: 2024-05-24 14:11:32.000000000 Z
+- name: crypto
+  description: Go supplementary cryptography libraries
+  package_url: https://pkg.go.dev/golang.org/x/crypto
+  version: 0.0.0
+  license: BSD-3-Clause
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/bleve/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-08 06:47:40.000000000 Z
+  vulnerabilities:
+  - name: Improper Verification of Cryptographic Signature in golang.org/x/crypto
+    cve_id: CVE-2020-9283
+    cve_url: https://github.com/advisories/GHSA-ffhg-7mh4-33c4
+    detected_date: Aug 22
+    severity: moderate
+    first_patched: 0.0.0-20200220183623-bac4c82f6975
+- name: bitset
+  description: Go package implementing bitsets
+  package_url: https://pkg.go.dev/github.com/willf/bitset
+  version: 1.1.10
+  license: BSD-3-Clause
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/bleve/go.sum
+  detection_source: backend/bleve/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-01 06:34:02.000000000 Z
+- name: bleve
+  description: A modern text indexing library for go
+  package_url: https://pkg.go.dev/github.com/blevesearch/bleve
+  version: 1.0.14
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/bleve/go.sum
+  detection_source: backend/bleve/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-01 06:34:02.000000000 Z
+- name: browser
+  description: Package browser provides helpers to open files
+  package_url: https://pkg.go.dev/github.com/pkg/browser
+  version: 0.0.0
+  license: BSD-2-Clause
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/go.sum
+  detection_source: go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-02-12 04:40:57.000000000 Z
+- name: bytebufferpool
+  description: Anti-memory-waste byte buffer pool
+  package_url: https://pkg.go.dev/github.com/valyala/bytebufferpool
+  version: 1.0.0
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-02-13 04:56:32.000000000 Z
+- name: compress
+  description: Optimized compression packages
+  package_url: https://pkg.go.dev/github.com/klauspost/compress
+  version: 1.12.3
+  license: BSD-3-Clause
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/bleve/go.sum
+  detection_source: backend/bleve/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-01 06:34:02.000000000 Z
+- name: demangle
+  description: C++ symbol name demangler written in Go
+  package_url: https://pkg.go.dev/github.com/ianlancetaylor/demangle
+  version: 0.0.0
+  license: BSD-3-Clause
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-08 06:47:40.000000000 Z
+- name: easyjson
+  description: Fast JSON serializer for golang
+  package_url: https://pkg.go.dev/github.com/mailru/easyjson
+  version: 0.7.7
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-08 06:47:40.000000000 Z
+- name: errors
+  description: Simple error handling primitives
+  package_url: https://pkg.go.dev/github.com/pkg/errors
+  version: 0.9.1
+  license: BSD-2-Clause
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/bleve/go.sum
+  detection_source: backend/bleve/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-01 06:34:02.000000000 Z
+- name: exp
+  description: Experimental and deprecated packages
+  package_url: https://pkg.go.dev/golang.org/x/exp
+  version: 0.0.0
+  license: BSD-3-Clause
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/bleve/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-02-13 04:56:32.000000000 Z
+- name: fasthttp
+  description: Fast HTTP package for Go
+  package_url: https://pkg.go.dev/github.com/valyala/fasthttp
+  version: 1.54.0
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-01 06:34:02.000000000 Z
+- name: fasttemplate
+  description: Simple and fast template engine for Go
+  package_url: https://pkg.go.dev/github.com/valyala/fasttemplate
+  version: 1.2.1
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/go.sum
+  detection_source: go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-02-12 04:40:57.000000000 Z
+- name: fwd
+  description: Buffered Reader/Writer
+  package_url: https://pkg.go.dev/github.com/philhofer/fwd
+  version: 1.0.0
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/bleve/go.sum
+  detection_source: backend/bleve/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-01 06:34:02.000000000 Z
+- name: gjson
+  description: Get JSON values quickly - JSON parser for Go
+  package_url: https://pkg.go.dev/github.com/tidwall/gjson
+  version: 1.12.1
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-08 06:47:40.000000000 Z
+- name: glog
+  description: Leveled execution logs for Go
+  package_url: https://pkg.go.dev/github.com/golang/glog
+  version: 0.0.0
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/bleve/go.sum
+  detection_source: backend/bleve/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-01 06:34:02.000000000 Z
+- name: go
+  description: Google Cloud Client Libraries for Go
+  package_url: https://pkg.go.dev/cloud.google.com/go
+  version: 0.26.0
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/bleve/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-02-13 04:56:32.000000000 Z
+- name: go-colorable
+  description: Go-colorable Colorable writer for windows
+  package_url: https://pkg.go.dev/github.com/mattn/go-colorable
+  version: 0.1.13
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-02-13 04:56:32.000000000 Z
+- name: go-difflib
+  description: Partial port of Python difflib package to Go
+  package_url: https://pkg.go.dev/github.com/pmezard/go-difflib
+  version: 1.0.0
+  license: BSD-3-Clause
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/bleve/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-04-15 12:50:35.000000000 Z
+- name: go-humanize
+  description: Go Humans!
+  package_url: https://pkg.go.dev/github.com/dustin/go-humanize
+  version: 1.0.0
+  license: Other
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/bleve/go.sum
+  detection_source: backend/bleve/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-01 06:34:02.000000000 Z
+- name: go-isatty
+  description: Package isatty implements interface to isatty
+  package_url: https://pkg.go.dev/github.com/mattn/go-isatty
+  version: 0.0.16
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-02-13 04:56:32.000000000 Z
+- name: go-metro
+  description: Go translation of MetroHash
+  package_url: https://pkg.go.dev/github.com/dgryski/go-metro
+  version: 0.0.0
+  license: Other
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-01 06:34:02.000000000 Z
+- name: go-ole
+  description: Win32 ole implementation for golang
+  package_url: https://pkg.go.dev/github.com/go-ole/go-ole
+  version: 1.2.6
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/go.sum
+  detection_source: go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-02-12 04:40:57.000000000 Z
+- name: go-porterstemmer
+  description: A native Go clean room implementation of the Porter Stemming algorithm
+  package_url: https://pkg.go.dev/github.com/blevesearch/go-porterstemmer
+  version: 1.0.3
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/bleve/go.sum
+  detection_source: backend/bleve/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-01 06:34:02.000000000 Z
+- name: go-runewidth
+  description: Go-runewidth Provides functions to get fixed width of the character
+    or string
+  package_url: https://pkg.go.dev/github.com/mattn/go-runewidth
+  version: 0.0.15
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-02-13 04:56:32.000000000 Z
+- name: go-spew
+  description: Implements a deep pretty printer for Go data structures to aid in debugging
+  package_url: https://pkg.go.dev/github.com/davecgh/go-spew
+  version: 1.1.0
+  license: ISC
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/bleve/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-04-08 06:03:15.000000000 Z
+- name: go-unsnap-stream
+  description: Small golang library for decoding the snappy streaming format https://github.com/google/snappy/blob/master/framing_format.txt
+  package_url: https://pkg.go.dev/github.com/glycerine/go-unsnap-stream
+  version: 0.0.0
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/bleve/go.sum
+  detection_source: backend/bleve/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-01 06:34:02.000000000 Z
+- name: go/compute/metadata
+  description: Google Cloud Client Libraries for Go
+  package_url: https://pkg.go.dev/cloud.google.com/go/compute/metadata
+  version: 0.3.0
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-01 06:34:02.000000000 Z
+- name: godotenv
+  description: A Go port of Ruby's dotenv library
+  package_url: https://pkg.go.dev/github.com/joho/godotenv
+  version: 1.5.1
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-02-14 04:38:15.000000000 Z
+- name: gogo/protobuf
+  description: Protocol Buffers for Go with Gadgets
+  package_url: https://pkg.go.dev/github.com/gogo/protobuf
+  version: 1.3.2
+  license: Other
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/bleve/go.sum
+  detection_source: backend/bleve/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-01 06:34:02.000000000 Z
+- name: gommon
+  description: Common packages for Go
+  package_url: https://pkg.go.dev/github.com/labstack/gommon
+  version: 0.4.0
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/go.sum
+  detection_source: go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-02-12 04:40:57.000000000 Z
+- name: google/uuid
+  description: 'Go package for UUIDs based on RFC 4122 and DCE 1.1: Authentication
+    and Security Services'
+  package_url: https://pkg.go.dev/github.com/google/uuid
+  version: 1.1.2
+  license: BSD-3-Clause
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-08 06:47:40.000000000 Z
+- name: groupcache
+  description: Groupcache is a caching and cache-filling library
+  package_url: https://pkg.go.dev/github.com/golang/groupcache
+  version: 0.0.0
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/bleve/go.sum
+  detection_source: backend/bleve/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-01 06:34:02.000000000 Z
+- name: gtreap
+  description: Gtreap is an immutable treap implementation in the Go Language
+  package_url: https://pkg.go.dev/github.com/steveyen/gtreap
+  version: 0.1.0
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/bleve/go.sum
+  detection_source: backend/bleve/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-01 06:34:02.000000000 Z
+- name: httpsnoop
+  description: Package httpsnoop provides an easy way to capture http related metrics
+  package_url: https://pkg.go.dev/github.com/felixge/httpsnoop
+  version: 1.0.4
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-01 06:34:02.000000000 Z
+- name: image
+  description: Go supplementary image libraries
+  package_url: https://pkg.go.dev/golang.org/x/image
+  version: 0.16.0
+  license: BSD-3-Clause
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-08 06:47:40.000000000 Z
+- name: json-iterator/go
+  description: A high-performance 100% compatible drop-in replacement of "encoding/json"
+  package_url: https://pkg.go.dev/github.com/json-iterator/go
+  version: 1.1.12
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/bleve/go.sum
+  detection_source: backend/bleve/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-01 06:34:02.000000000 Z
+- name: jsonpointer
+  description: Fork of gojsonpointer with support for structs
+  package_url: https://pkg.go.dev/github.com/go-openapi/jsonpointer
+  version: 0.21.0
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-08 06:47:40.000000000 Z
+- name: jsonreference
+  description: Fork of gojsonreference with support for structs
+  package_url: https://pkg.go.dev/github.com/go-openapi/jsonreference
+  version: 0.21.0
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-08 06:47:40.000000000 Z
+- name: logr
+  description: A simple logging interface for Go
+  package_url: https://pkg.go.dev/github.com/go-logr/logr
+  version: 1.2.2
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-01 06:34:02.000000000 Z
+- name: mapstructure
+  description: Go library for decoding generic map values into native Go structures
+  package_url: https://pkg.go.dev/github.com/mitchellh/mapstructure
+  version: 1.1.2
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/bleve/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-08 06:47:40.000000000 Z
+- name: match
+  description: Simple string pattern matcher for Go
+  package_url: https://pkg.go.dev/github.com/tidwall/match
+  version: 1.1.1
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-08 06:47:40.000000000 Z
+- name: msgp
+  description: A Go code generator for MessagePack / msgpack.org[Go]
+  package_url: https://pkg.go.dev/github.com/tinylib/msgp
+  version: 1.1.0
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/bleve/go.sum
+  detection_source: backend/bleve/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-01 06:34:02.000000000 Z
+- name: net
+  description: Go supplementary network libraries
+  package_url: https://pkg.go.dev/golang.org/x/net
+  version: 0.0.0
+  license: BSD-3-Clause
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/bleve/go.sum
+  detection_source: backend/bleve/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-01 06:34:02.000000000 Z
+- name: oauth2
+  description: Go OAuth2
+  package_url: https://pkg.go.dev/golang.org/x/oauth2
+  version: 0.0.0
+  license: BSD-3-Clause
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/bleve/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-08 06:47:40.000000000 Z
+- name: pprof
+  description: Pprof is a tool for visualization and analysis of profiling data
+  package_url: https://pkg.go.dev/github.com/google/pprof
+  version: 0.0.0
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-01 06:34:02.000000000 Z
+- name: proto
+  description: Go support for Google's protocol buffers
+  package_url: https://pkg.go.dev/github.com/golang/protobuf/proto
+  license: BSD-3-Clause
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/bleve/go.mod
+  detection_source: backend/bleve/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-01 06:34:02.000000000 Z
+- name: readline
+  description: Readline is a pure go
+  package_url: https://pkg.go.dev/github.com/chzyer/readline
+  version: 1.5.1
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-08 06:47:40.000000000 Z
+- name: reflect2
+  description: Reflect api without runtime reflect.Value cost
+  package_url: https://pkg.go.dev/github.com/modern-go/reflect2
+  version: 1.0.2
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/bleve/go.sum
+  detection_source: backend/bleve/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-01 06:34:02.000000000 Z
+- name: resize
+  description: Pure golang image resizing
+  package_url: https://pkg.go.dev/github.com/nfnt/resize
+  version: 0.0.0
+  license: ISC
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-08 06:47:40.000000000 Z
+- name: ristretto
+  description: A high performance memory-bound Go cache
+  package_url: https://pkg.go.dev/github.com/dgraph-io/ristretto
+  version: 0.1.1
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/bleve/go.sum
+  detection_source: backend/bleve/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-01 06:34:02.000000000 Z
+- name: roaring
+  description: Roaring bitmaps in Go
+  package_url: https://pkg.go.dev/github.com/RoaringBitmap/roaring
+  version: 0.4.23
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/bleve/go.sum
+  detection_source: backend/bleve/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-01 06:34:02.000000000 Z
+- name: rtree
+  description: RTree implementation for Go
+  package_url: https://pkg.go.dev/github.com/tidwall/rtree
+  version: 1.3.1
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-04-08 06:03:15.000000000 Z
+- name: segment
+  description: 'A Go library for performing Unicode Text Segmentation as described
+    in Unicode Standard Annex #29'
+  package_url: https://pkg.go.dev/github.com/blevesearch/segment
+  version: 0.9.0
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/bleve/go.sum
+  detection_source: backend/bleve/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-01 06:34:02.000000000 Z
+- name: smat
+  description: State Machine Assisted Testing
+  package_url: https://pkg.go.dev/github.com/mschoch/smat
+  version: 0.0.0
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/bleve/go.sum
+  detection_source: backend/bleve/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-01 06:34:02.000000000 Z
+- name: snappy
+  description: The Snappy compression format in the Go programming language
+  package_url: https://pkg.go.dev/github.com/golang/snappy
+  version: 0.0.0
+  license: BSD-3-Clause
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/bleve/go.sum
+  detection_source: backend/bleve/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-01 06:34:02.000000000 Z
+- name: spec
+  description: Openapi specification object model
+  package_url: https://pkg.go.dev/github.com/go-openapi/spec
+  version: 0.21.0
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-03-20 09:50:29.000000000 Z
+- name: sqlx
+  description: General purpose extensions to golang's database/sql
+  package_url: https://pkg.go.dev/github.com/jmoiron/sqlx
+  version: 1.4.0
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-05-03 10:52:28.000000000 Z
+- name: swag
+  description: Goodie bag in use in the go-openapi projects
+  package_url: https://pkg.go.dev/github.com/go-openapi/swag
+  version: 0.23.0
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-05-09 03:38:00.000000000 Z
+- name: swaggo/swag
+  description: Automatically generate RESTful API documentation with Swagger 2.0 for
+    Go
+  package_url: https://pkg.go.dev/github.com/swaggo/swag
+  version: 1.16.3
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-01 06:34:02.000000000 Z
+- name: sys
+  description: Go packages for low-level interaction with the operating system
+  package_url: https://pkg.go.dev/golang.org/x/sys
+  version: 0.0.0
+  license: BSD-3-Clause
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/bleve/go.sum
+  detection_source: backend/bleve/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-01 06:34:02.000000000 Z
+- name: tcplisten
+  description: Customizable TCP net.Listener for Go
+  package_url: https://pkg.go.dev/github.com/valyala/tcplisten
+  version: 1.0.0
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-02-13 04:56:32.000000000 Z
+- name: text
+  description: Go text processing support
+  package_url: https://pkg.go.dev/golang.org/x/text
+  version: 0.3.0
+  license: BSD-3-Clause
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/bleve/go.sum
+  detection_source: backend/bleve/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-01 06:34:02.000000000 Z
+- name: tools
+  description: Go Tools
+  package_url: https://pkg.go.dev/golang.org/x/tools
+  version: 0.0.0
+  license: BSD-3-Clause
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/bleve/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-08 06:47:40.000000000 Z
+- name: vellum
+  description: A Go library implementing an FST
+  package_url: https://pkg.go.dev/github.com/couchbase/vellum
+  version: 1.0.2
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/bleve/go.sum
+  detection_source: backend/bleve/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-01 06:34:02.000000000 Z
+- name: websocket
+  description: A fast
+  package_url: https://pkg.go.dev/github.com/gorilla/websocket
+  version: 1.4.2
+  license: BSD-3-Clause
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-06-01 06:34:02.000000000 Z
+- name: zap
+  description: Blazing fast, structured, leveled logging in Go
+  package_url: https://pkg.go.dev/go.uber.org/zap
+  version: 1.27.0
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Go Modules Packages
+  image_url: https://img.stackshare.io/package/go-packages/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend/go.sum
+  detection_source: backend/go.mod
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-02-13 04:56:32.000000000 Z
+- name: com.fasterxml.jackson.core:jackson-databind
+  description: 'General data-binding functionality for Jackson: works on core streaming
+    API'
+  version: 2.17.1
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Maven Packages
+  image_url: https://img.stackshare.io/package/maven/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend-spring/build.gradle
+  detection_source: backend-spring/build.gradle
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-05-19 11:26:08.000000000 Z
+- name: com.fasterxml.jackson.datatype:jackson-datatype-jdk8
+  description: Add-on module for Jackson
+  version: 2.17.1
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Maven Packages
+  image_url: https://img.stackshare.io/package/maven/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend-spring/build.gradle
+  detection_source: backend-spring/build.gradle
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-05-18 07:19:35.000000000 Z
+- name: com.fasterxml.jackson.datatype:jackson-datatype-jsr310
+  description: Add-on module to support JSR-310
+  version: 2.17.1
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Maven Packages
+  image_url: https://img.stackshare.io/package/maven/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend-spring/build.gradle
+  detection_source: backend-spring/build.gradle
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-05-18 07:19:35.000000000 Z
+- name: org.apache.pdfbox:pdfbox
+  description: The Apache PDFBox library is an open source Java tool for working with
+    PDF documents
+  version: 3.0.2
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Maven Packages
+  image_url: https://img.stackshare.io/package/maven/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend-spring/build.gradle
+  detection_source: backend-spring/build.gradle
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-05-20 07:44:34.000000000 Z
+- name: org.junit.jupiter:junit-jupiter-api
+  description: Module "junit-jupiter-api" of JUnit 5
+  version: 5.11.0
+  license: EPL-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Maven Packages
+  image_url: https://img.stackshare.io/package/maven/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend-spring/build.gradle
+  detection_source: backend-spring/build.gradle
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-05-20 07:44:34.000000000 Z
+- name: org.junit.jupiter:junit-jupiter-engine
+  description: Module "junit-jupiter-engine" of JUnit 5
+  version: 5.11.0
+  license: EPL-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Maven Packages
+  image_url: https://img.stackshare.io/package/maven/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend-spring/build.gradle
+  detection_source: backend-spring/build.gradle
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-05-20 07:44:34.000000000 Z
+- name: org.mockito:mockito-core
+  description: Mockito mock objects library core API and implementation
+  version: 5.12.0
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Maven Packages
+  image_url: https://img.stackshare.io/package/maven/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend-spring/build.gradle
+  detection_source: backend-spring/build.gradle
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-05-20 07:44:34.000000000 Z
+- name: org.openjdk.jmh:jmh-core
+  description: The jmh is a Java harness for building
+  version: '1.37'
+  license: GPL-3.0-only,GPL-2.0-with-classpath-exception
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Maven Packages
+  image_url: https://img.stackshare.io/package/maven/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend-spring/build.gradle
+  detection_source: backend-spring/build.gradle
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-05-20 07:44:34.000000000 Z
+- name: org.projectlombok:lombok
+  description: 'Spice up your java: Automatic Resource Management'
+  version: 1.18.32
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Maven Packages
+  image_url: https://img.stackshare.io/package/maven/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend-spring/build.gradle
+  detection_source: backend-spring/build.gradle
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-05-20 07:44:34.000000000 Z
+- name: org.springframework.boot:spring-boot-starter-data-jpa
+  description: Starter for using Spring Data JPA with Hibernate
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Maven Packages
+  image_url: https://img.stackshare.io/package/maven/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend-spring/build.gradle
+  detection_source: backend-spring/build.gradle
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-05-20 07:44:34.000000000 Z
+- name: org.springframework.boot:spring-boot-starter-data-redis
+  description: Starter for using Redis key-value data store with Spring Data Redis
+    and the Lettuce client
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Maven Packages
+  image_url: https://img.stackshare.io/package/maven/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend-spring/build.gradle
+  detection_source: backend-spring/build.gradle
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-05-20 07:44:34.000000000 Z
+- name: org.springframework.boot:spring-boot-starter-mail
+  description: Starter for using Java Mail and Spring Framework's email sending support
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Maven Packages
+  image_url: https://img.stackshare.io/package/maven/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend-spring/build.gradle
+  detection_source: backend-spring/build.gradle
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-05-20 07:44:34.000000000 Z
+- name: org.springframework.boot:spring-boot-starter-security
+  description: Starter for using Spring Security
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Maven Packages
+  image_url: https://img.stackshare.io/package/maven/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend-spring/build.gradle
+  detection_source: backend-spring/build.gradle
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-05-20 07:44:34.000000000 Z
+- name: org.springframework.boot:spring-boot-starter-test
+  description: Starter for testing Spring Boot applications with libraries including
+    JUnit
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Maven Packages
+  image_url: https://img.stackshare.io/package/maven/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend-spring/build.gradle
+  detection_source: backend-spring/build.gradle
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-05-20 07:44:34.000000000 Z
+- name: org.springframework.boot:spring-boot-starter-thymeleaf
+  description: Starter for building MVC web applications using Thymeleaf views
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Maven Packages
+  image_url: https://img.stackshare.io/package/maven/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend-spring/build.gradle
+  detection_source: backend-spring/build.gradle
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-05-20 07:44:34.000000000 Z
+- name: org.springframework.boot:spring-boot-starter-web
+  description: Starter for building web, including RESTful, applications using Spring
+    MVC
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Maven Packages
+  image_url: https://img.stackshare.io/package/maven/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend-spring/build.gradle
+  detection_source: backend-spring/build.gradle
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-05-20 07:44:34.000000000 Z
+- name: org.springframework.boot:spring-boot-starter-websocket
+  description: Starter for building WebSocket applications using Spring Framework's
+    WebSocket support
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Maven Packages
+  image_url: https://img.stackshare.io/package/maven/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend-spring/build.gradle
+  detection_source: backend-spring/build.gradle
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-05-20 07:44:34.000000000 Z
+- name: org.springframework.security:spring-security-test
+  description: Spring-security-test
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Maven Packages
+  image_url: https://img.stackshare.io/package/maven/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/backend-spring/build.gradle
+  detection_source: backend-spring/build.gradle
+  last_updated_by: Alfex4936
+  last_updated_on: 2024-05-20 07:44:34.000000000 Z
+- name: "@types/node"
+  description: TypeScript definitions for Node.js
+  package_url: https://www.npmjs.com/@types/node
+  version: 20.12.7
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: npm Packages
+  image_url: https://img.stackshare.io/package/15809/default_5e5e8ac63beda29f31f1844df64d4b8247570a66.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/frontend/package-lock.json
+  detection_source: frontend/package.json
+  last_updated_by: 2YH02
+  last_updated_on: 2024-04-22 12:56:33.000000000 Z
+- name: "@types/react"
+  description: TypeScript definitions for React
+  package_url: https://www.npmjs.com/@types/react
+  version: 18.2.75
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: npm Packages
+  image_url: https://img.stackshare.io/package/15894/default_1d65e37e65b7f80761374f0202776043277d505d.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/frontend/package-lock.json
+  detection_source: frontend/package.json
+  last_updated_by: 2YH02
+  last_updated_on: 2024-05-24 14:11:32.000000000 Z
+- name: "@types/react-dom"
+  description: TypeScript definitions for React
+  package_url: https://www.npmjs.com/@types/react-dom
+  version: 18.2.24
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: npm Packages
+  image_url: https://img.stackshare.io/package/15946/default_54b691c123fc8979741e800e4dcd3936c0f3b246.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/frontend/package-lock.json
+  detection_source: frontend/package.json
+  last_updated_by: 2YH02
+  last_updated_on: 2024-05-24 14:11:32.000000000 Z
+- name: "@types/uuid"
+  description: TypeScript definitions for uuid
+  package_url: https://www.npmjs.com/@types/uuid
+  version: 9.0.8
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: npm Packages
+  image_url: https://img.stackshare.io/package/16257/default_ab17554b7e80af3d234b14168ed61e75d43f8eee.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/frontend/package-lock.json
+  detection_source: frontend/package.json
+  last_updated_by: 2YH02
+  last_updated_on: 2024-04-22 12:56:33.000000000 Z
+- name: eslint-config-next
+  description: ESLint configuration used by Next.js
+  package_url: https://www.npmjs.com/eslint-config-next
+  version: 14.1.4
+  open_source: false
+  hosted_saas: false
+  category: Build, Test, Deploy
+  sub_category: Package Managers
+  image_url: https://img.stackshare.io/package/npm/image.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/frontend/package-lock.json
+  detection_source: frontend/package.json
+  last_updated_by: 2YH02
+  last_updated_on: 2024-05-27 12:26:31.000000000 Z
+- name: react-dom
+  description: React package for working with the DOM
+  package_url: https://www.npmjs.com/react-dom
+  version: 18.2.0
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: npm Packages
+  image_url: https://img.stackshare.io/package/15808/default_14fd11531839d935f920b6d55bd6f3528c890ad7.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/frontend/package-lock.json
+  detection_source: frontend/package.json
+  last_updated_by: 2YH02
+  last_updated_on: 2024-05-24 14:11:32.000000000 Z
+- name: react-icons
+  description: SVG React icons of popular icon packs using ES6 imports
+  package_url: https://www.npmjs.com/react-icons
+  version: 5.2.1
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: npm Packages
+  image_url: https://img.stackshare.io/package/16909/default_7b9968788548874538c601457e8dcd9c74bd2051.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/frontend/package-lock.json
+  detection_source: frontend/package.json
+  last_updated_by: 2YH02
+  last_updated_on: 2024-05-24 14:11:32.000000000 Z
+- name: swiper
+  description: Most modern mobile touch slider and framework with hardware accelerated
+    transitions
+  package_url: https://www.npmjs.com/swiper
+  version: 11.1.4
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: npm Packages
+  image_url: https://img.stackshare.io/package/17656/default_b06ec1ccf403dac1459596b8571a4fb6a46577e1.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/frontend/package-lock.json
+  detection_source: frontend/package.json
+  last_updated_by: 2YH02
+  last_updated_on: 2024-06-04 15:02:13.000000000 Z
+- name: tailwindcss
+  description: A utility-first CSS framework for rapidly building custom user interfaces
+  package_url: https://www.npmjs.com/tailwindcss
+  version: 3.4.3
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: npm Packages
+  image_url: https://img.stackshare.io/package/17398/default_2cd7ed1c123f2fca074a6f4b16c4e73d5bfe82be.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/frontend/package-lock.json
+  detection_source: frontend/package.json
+  last_updated_by: 2YH02
+  last_updated_on: 2024-04-15 13:21:32.000000000 Z
+- name: three
+  description: JavaScript 3D library
+  package_url: https://www.npmjs.com/three
+  version: 0.164.1
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: npm Packages
+  image_url: https://img.stackshare.io/package/16653/default_cc0f40a737548852d2ee666c132c258c9a2c0cad.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/frontend/package-lock.json
+  detection_source: frontend/package.json
+  last_updated_by: 2YH02
+  last_updated_on: 2024-05-24 14:11:32.000000000 Z
+- name: uuid
+  description: RFC4122
+  package_url: https://www.npmjs.com/uuid
+  version: 9.0.1
+  license: MIT
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: npm Packages
+  image_url: https://img.stackshare.io/package/15916/default_e0a4fb1126d7400f419f0931cf1669947a5bc552.png
+  detection_source_url: https://github.com/Alfex4936/chulbong-kr/blob/main/frontend/package-lock.json
+  detection_source: frontend/package.json
+  last_updated_by: 2YH02
+  last_updated_on: 2024-04-22 12:56:33.000000000 Z
