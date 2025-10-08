@@ -5,6 +5,7 @@ import (
 	"errors"
 	"math"
 	"mime/multipart"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -72,6 +73,7 @@ func RegisterMarkerRoutes(api fiber.Router, handler *MarkerHandler, authMiddlewa
 		// publicGroup.Get("2", handler.HandleGetAllMarkersLocalMsgp)
 		// publicGroup.Get("-proto", handler.HandleGetAllMarkersProto)
 		publicGroup.Get("/new", handler.HandleGetAllNewMarkers)
+		publicGroup.Get("/user/:username", handler.HandleGetMarkersByUsername)
 		publicGroup.Get("/:markerId/details", authMiddleware.VerifySoft, handler.HandleGetMarker)
 		publicGroup.Get("/:markerID/facilities", handler.HandleGetFacilities)
 		publicGroup.Get("/close", handler.HandleFindCloseMarkers)
@@ -423,6 +425,8 @@ func (h *MarkerHandler) HandleCreateMarkerWithPhotos(c *fiber.Ctx) error {
 	if err != nil {
 		if strings.Contains(err.Error(), "an error during file") {
 			return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "an error during file upload"})
+		} else if strings.Contains(err.Error(), "일일 마커 생성 한도") {
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{"error": "일일 마커 생성 한도(10개)에 도달했습니다. 내일 다시 시도해주세요."})
 		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal error happened, try again later"})
 	}
@@ -1012,6 +1016,83 @@ func (h *MarkerHandler) HandleGetNewMarkers(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(markers)
+}
+
+// HandleGetMarkersByUsername retrieves a paginated list of markers created by a specific user identified by username.
+//
+// @Summary Get markers by username
+// @Description Fetches a paginated list of markers created by a user identified by their username. This is a public endpoint that does not require authentication.
+// @ID get-markers-by-username
+// @Tags markers-data, pagination
+// @Accept json
+// @Produce json
+// @Param username path string true "Username of the user whose markers to retrieve"
+// @Param page query int false "Page number (default: 1)"
+// @Param pageSize query int false "Number of markers per page (default: 10, max: 50)"
+// @Success 200 {object} dto.UserMarkers "List of user's markers with pagination"
+// @Failure 400 {object} map[string]string "Invalid username or pagination parameters"
+// @Failure 404 {object} map[string]string "User not found"
+// @Failure 500 {object} map[string]string "Failed to get markers"
+// @Router /api/v1/markers/user/{username} [get]
+func (h *MarkerHandler) HandleGetMarkersByUsername(c *fiber.Ctx) error {
+	username := c.Params("username")
+	if username == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Username is required"})
+	}
+
+	// URL decode the username to handle Korean characters and other special characters
+	decodedUsername, err := url.QueryUnescape(username)
+	if err != nil {
+		// If decoding fails, use the original username
+		decodedUsername = username
+	}
+
+	pagination, err := util.ParsePaginationParams(c, &util.PaginationConfig{
+		DefaultPage:       1,
+		DefaultPageSize:   10,
+		PageParamName:     "page",
+		PageSizeParamName: "pageSize",
+	})
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid pagination parameters"})
+	}
+
+	page := pagination.Page
+	pageSize := pagination.PageSize
+
+	// Limit maximum pageSize to prevent abuse
+	if pageSize > 50 {
+		pageSize = 50
+	}
+
+	// Get markers by username
+	markersWithPhotos, total, err := h.MarkerFacadeService.GetAllMarkersByUsernameWithPagination(decodedUsername, page, pageSize)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to get markers"})
+	}
+
+	// If no markers found and total is 0, user might not exist or has no markers
+	if len(markersWithPhotos) == 0 && total == 0 {
+		return c.Status(fiber.StatusOK).JSON(dto.UserMarkers{
+			MarkersWithPhotos: []dto.MarkerSimpleWithDescription{},
+			CurrentPage:       page,
+			TotalPages:        0,
+			TotalMarkers:      0,
+		})
+	}
+
+	totalPages := int(math.Ceil(float64(total) / float64(pageSize)))
+
+	// Prepare the response
+	response := dto.UserMarkers{
+		MarkersWithPhotos: markersWithPhotos,
+		CurrentPage:       page,
+		TotalPages:        totalPages,
+		TotalMarkers:      total,
+	}
+
+	// Return the response
+	return c.JSON(response)
 }
 
 // helpers

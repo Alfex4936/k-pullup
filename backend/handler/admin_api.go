@@ -3,6 +3,7 @@ package handler
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"image"
 	"image/gif"
 	"image/jpeg"
@@ -58,6 +59,8 @@ func NewAdminHandler(
 // RegisterAdminRoutes sets up the routes for admin handling within the application.
 func RegisterAdminRoutes(api fiber.Router, handler *AdminHandler, authMiddleware *middleware.AuthMiddleware) {
 	api.Post("/chat/ban/:markerID/:userID", authMiddleware.CheckAdmin, handler.HandleBanUser)
+	api.Post("/chat/kick/:markerID/:userID", authMiddleware.CheckAdmin, handler.HandleKickUser)
+	api.Get("/chat/users/:markerID", authMiddleware.CheckAdmin, handler.HandleGetActiveUsers)
 
 	api.Post("/admin/blur-encode", handler.HandleEncodeBlurImage)
 	api.Get("/admin/blur-decode", handler.HandleDecodeBlurImage)
@@ -95,6 +98,13 @@ func RegisterAdminRoutes(api fiber.Router, handler *AdminHandler, authMiddleware
 		adminGroup.Delete("/notices/:noticeID", handler.HandleDeleteNotice)
 
 		adminGroup.Delete("/photo", handler.HandleDeletePhoto)
+
+		// User warning management
+		adminGroup.Get("/users/warnings", handler.HandleGetUsersWithWarnings)
+		adminGroup.Post("/users/warnings", handler.HandleUpdateUserWarning)
+
+		// User daily status
+		adminGroup.Get("/users/:userID/daily-status", handler.HandleGetUserDailyStatus)
 	}
 }
 
@@ -179,6 +189,85 @@ func (h *AdminHandler) HandleBanUser(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"message": "User successfully banned",
 		"time":    duration,
+	})
+}
+
+// HandleKickUser kicks a user from a chat room without banning them
+//
+// @Summary Kick user from chat room
+// @Description Immediately disconnects a user from a specific chat room without applying a ban
+// @ID admin-kick-user
+// @Tags admin,chat
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param markerID path string true "Marker ID for the chat room"
+// @Param userID path string true "User ID to kick"
+// @Success 200 {object} map[string]string "User successfully kicked"
+// @Failure 400 {object} map[string]string "Missing markerID or userID"
+// @Failure 500 {object} map[string]string "Failed to kick user"
+// @Router /api/v1/chat/kick/{markerID}/{userID} [post]
+func (h *AdminHandler) HandleKickUser(c *fiber.Ctx) error {
+	markerID := c.Params("markerID")
+	userID := c.Params("userID")
+
+	if markerID == "" || userID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Missing markerID or userID",
+		})
+	}
+
+	// Kick the user from the room
+	err := h.AdminFacade.KickUserFromRoom(markerID, userID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to kick user: " + err.Error(),
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"message": "User successfully kicked",
+	})
+}
+
+// HandleGetActiveUsers returns all active users in a specific chat room
+//
+// @Summary Get active users in chat room
+// @Description Returns a list of all currently connected users in a specific chat room
+// @ID admin-get-active-users
+// @Tags admin,chat
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param markerID path string true "Marker ID for the chat room"
+// @Success 200 {object} map[string]interface{} "Active users list with count"
+// @Failure 400 {object} map[string]string "Missing markerID"
+// @Failure 500 {object} map[string]string "Failed to get active users"
+// @Router /api/v1/chat/users/{markerID} [get]
+func (h *AdminHandler) HandleGetActiveUsers(c *fiber.Ctx) error {
+	markerID := c.Params("markerID")
+
+	if markerID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Missing markerID",
+		})
+	}
+
+	// Get active users in the room
+	users, err := h.AdminFacade.GetActiveUsersInRoom(markerID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to get active users: " + err.Error(),
+		})
+	}
+
+	// Get user count
+	userCount, _ := h.AdminFacade.GetUserCountInRoom(markerID)
+
+	return c.JSON(fiber.Map{
+		"markerID":  markerID,
+		"userCount": userCount,
+		"users":     users,
 	})
 }
 
@@ -525,14 +614,21 @@ func (h *AdminHandler) HandleNextImage(c *fiber.Ctx) error {
 	}
 
 	// Set aggressive timeout for low-resource server
-	c.Context().SetUserValue("timeout", 10*time.Second)
+	c.Context().SetUserValue("timeout", 15*time.Second)
 
-	// Call the service to optimize the image
-	resultBytes, contentType, err := h.AdminFacade.OptimizeImage(srcURL, width, quality, c.Get("Accept"))
+	// Use the request context to respect client disconnection
+	ctx := c.UserContext()
+
+	// Call the service to optimize the image with context
+	resultBytes, contentType, err := h.AdminFacade.OptimizeImageWithContext(ctx, srcURL, width, quality, c.Get("Accept"))
 	if err != nil {
 		// Return 503 for resource exhaustion instead of 500
 		if strings.Contains(err.Error(), "timeout") || strings.Contains(err.Error(), "busy") {
 			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "Service temporarily unavailable"})
+		}
+		// Handle context cancellation
+		if err == context.Canceled || err == context.DeadlineExceeded {
+			return c.Status(fiber.StatusRequestTimeout).JSON(fiber.Map{"error": "Request cancelled or timed out"})
 		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -546,4 +642,118 @@ func (h *AdminHandler) HandleNextImage(c *fiber.Ctx) error {
 
 func (h *AdminHandler) HandleHTMLReportAdmin(c *fiber.Ctx) error {
 	return c.Render("swagger", fiber.Map{})
+}
+
+// HandleGetUsersWithWarnings returns all users with warning count > 0
+func (h *AdminHandler) HandleGetUsersWithWarnings(c *fiber.Ctx) error {
+	users, err := h.AdminFacade.GetUsersWithWarnings()
+	if err != nil {
+		h.Logger.Error("Failed to get users with warnings", zap.Error(err))
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to retrieve users with warnings",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"users": users,
+		"count": len(users),
+	})
+}
+
+// HandleUpdateUserWarning increases or decreases user warning count
+func (h *AdminHandler) HandleUpdateUserWarning(c *fiber.Ctx) error {
+	var req dto.UserWarningRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request format",
+		})
+	}
+
+	// Validate request
+	if req.UserID <= 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid user ID",
+		})
+	}
+
+	if req.Action != 1 && req.Action != -1 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid action: must be 1 (increase) or -1 (decrease)",
+		})
+	}
+
+	user, err := h.AdminFacade.UpdateUserWarning(req.UserID, req.Action)
+	if err != nil {
+		h.Logger.Error("Failed to update user warning",
+			zap.Int("userID", req.UserID),
+			zap.Int("action", req.Action),
+			zap.Error(err))
+
+		if err.Error() == "user not found" {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "User not found",
+			})
+		}
+
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to update user warning",
+		})
+	}
+
+	actionText := "increased"
+	if req.Action == -1 {
+		actionText = "decreased"
+	}
+
+	return c.JSON(fiber.Map{
+		"message": fmt.Sprintf("User warning count %s successfully", actionText),
+		"user":    user,
+	})
+}
+
+// HandleGetUserDailyStatus returns user's daily creation limits status
+func (h *AdminHandler) HandleGetUserDailyStatus(c *fiber.Ctx) error {
+	userIDStr := c.Params("userID")
+	userID, err := strconv.Atoi(userIDStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid user ID",
+		})
+	}
+
+	// Get marker creation status
+	markerCurrent, markerRemaining, err := h.AdminFacade.MarkerManage.GetUserMarkerCreationStatus(userID)
+	if err != nil {
+		h.Logger.Error("Failed to get user marker creation status",
+			zap.Int("userID", userID),
+			zap.Error(err))
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to get marker creation status",
+		})
+	}
+
+	// Get comment creation status
+	commentCurrent, commentRemaining, err := h.AdminFacade.GetUserCommentCreationStatus(userID)
+	if err != nil {
+		h.Logger.Error("Failed to get user comment creation status",
+			zap.Int("userID", userID),
+			zap.Error(err))
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to get comment creation status",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"userID": userID,
+		"markers": fiber.Map{
+			"current":   markerCurrent,
+			"remaining": markerRemaining,
+			"limit":     10,
+		},
+		"comments": fiber.Map{
+			"current":   commentCurrent,
+			"remaining": commentRemaining,
+			"limit":     15,
+		},
+	})
 }

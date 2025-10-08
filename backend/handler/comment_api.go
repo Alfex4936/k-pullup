@@ -89,6 +89,10 @@ func (h *CommentHandler) HandlePostComment(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "You have already commented 3 times on this marker"})
 		case errors.Is(err, service.ErrMarkerNotFound):
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Marker not found"})
+		case errors.Is(err, service.ErrDailyCommentLimitReached):
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{"error": "일일 댓글 작성 한도(15개)에 도달했습니다. 내일 다시 시도해주세요"})
+		case errors.Is(err, service.ErrCommentMax):
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{"error": "Comment creation limit exceeded"})
 		default:
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create comment"})
 		}

@@ -235,3 +235,139 @@ func (s *RedisService) FindNearbyMarkersMeter(lat float64, lon float64, radius f
 
 	return result, nil
 }
+
+// GetMarkerCreateCount gets the current marker creation count for a user on a specific date
+func (s *RedisService) GetMarkerCreateCount(userID int, date string) (int64, error) {
+	ctx := context.Background()
+	key := fmt.Sprintf("marker_limit:%d:%s", userID, date)
+
+	getCmd := s.Core.Client.B().Get().Key(key).Build()
+	resp, err := s.Core.Client.Do(ctx, getCmd).ToString()
+
+	if err != nil {
+		if rueidis.IsRedisNil(err) {
+			return 0, nil // Key doesn't exist, count is 0
+		}
+		return 0, err
+	}
+
+	if resp == "" {
+		return 0, nil
+	}
+
+	count, err := strconv.ParseInt(resp, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+// IncrementMarkerCreateCount increments the marker creation count for a user on a specific date
+// and sets expiration if it's the first increment of the day
+func (s *RedisService) IncrementMarkerCreateCount(userID int, date string) (int64, error) {
+	ctx := context.Background()
+	key := fmt.Sprintf("marker_limit:%d:%s", userID, date)
+
+	// Use INCR command to atomically increment
+	incrCmd := s.Core.Client.B().Incr().Key(key).Build()
+	newCount, err := s.Core.Client.Do(ctx, incrCmd).AsInt64()
+	if err != nil {
+		return 0, err
+	}
+
+	// If this is the first increment (count = 1), set expiration to end of day
+	if newCount == 1 {
+		// Set expiration to 24 hours from now
+		expireCmd := s.Core.Client.B().Expire().Key(key).Seconds(24 * 60 * 60).Build()
+		if err := s.Core.Client.Do(ctx, expireCmd).Error(); err != nil {
+			// Log error but don't fail the operation
+			return newCount, nil
+		}
+	}
+
+	return newCount, nil
+}
+
+// GetRemainingMarkerCreates returns how many markers a user can still create today
+func (s *RedisService) GetRemainingMarkerCreates(userID int, date string) (int, error) {
+	currentCount, err := s.GetMarkerCreateCount(userID, date)
+	if err != nil {
+		return 0, err
+	}
+
+	remaining := 10 - int(currentCount)
+	if remaining < 0 {
+		remaining = 0
+	}
+
+	return remaining, nil
+}
+
+// GetCommentCreateCount gets the current comment creation count for a user on a specific date
+func (s *RedisService) GetCommentCreateCount(userID int, date string) (int64, error) {
+	ctx := context.Background()
+	key := fmt.Sprintf("comment_limit:%d:%s", userID, date)
+
+	getCmd := s.Core.Client.B().Get().Key(key).Build()
+	resp, err := s.Core.Client.Do(ctx, getCmd).ToString()
+
+	if err != nil {
+		if rueidis.IsRedisNil(err) {
+			return 0, nil // Key doesn't exist, count is 0
+		}
+		return 0, err
+	}
+
+	if resp == "" {
+		return 0, nil
+	}
+
+	count, err := strconv.ParseInt(resp, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+// IncrementCommentCreateCount increments the comment creation count for a user on a specific date
+// and sets expiration if it's the first increment of the day
+func (s *RedisService) IncrementCommentCreateCount(userID int, date string) (int64, error) {
+	ctx := context.Background()
+	key := fmt.Sprintf("comment_limit:%d:%s", userID, date)
+
+	// Use INCR command to atomically increment
+	incrCmd := s.Core.Client.B().Incr().Key(key).Build()
+	newCount, err := s.Core.Client.Do(ctx, incrCmd).AsInt64()
+	if err != nil {
+		return 0, err
+	}
+
+	// If this is the first increment (count = 1), set expiration to end of day
+	if newCount == 1 {
+		// Set expiration to 24 hours from now
+		expireCmd := s.Core.Client.B().Expire().Key(key).Seconds(24 * 60 * 60).Build()
+		if err := s.Core.Client.Do(ctx, expireCmd).Error(); err != nil {
+			// Log error but don't fail the operation
+			return newCount, nil
+		}
+	}
+
+	return newCount, nil
+}
+
+// GetRemainingCommentCreates returns how many comments a user can still create today
+func (s *RedisService) GetRemainingCommentCreates(userID int, date string) (int, error) {
+	currentCount, err := s.GetCommentCreateCount(userID, date)
+	if err != nil {
+		return 0, err
+	}
+
+	remaining := 15 - int(currentCount)
+	if remaining < 0 {
+		remaining = 0
+	}
+
+	return remaining, nil
+}

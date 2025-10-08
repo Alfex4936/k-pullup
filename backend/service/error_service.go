@@ -8,8 +8,10 @@ var (
 	ErrNoPhotos   = errors.New("upload at least one photo")
 
 	// Comment
-	ErrMarkerNotFound     = errors.New("marker not found")
-	ErrMaxCommentsReached = errors.New("user has reached the maximum number of comments")
+	ErrMarkerNotFound           = errors.New("marker not found")
+	ErrCommentMax               = errors.New("comment creation limit exceeded")
+	ErrMaxCommentsReached       = errors.New("user has reached the maximum number of comments")
+	ErrDailyCommentLimitReached = errors.New("daily comment creation limit exceeded")
 
 	// Report
 	ErrBeginTransaction   = errors.New("could not begin transaction")

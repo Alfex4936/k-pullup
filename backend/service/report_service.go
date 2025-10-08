@@ -155,18 +155,21 @@ type ReportService struct {
 	S3Service       *S3Service
 	LocationService *MarkerLocationService
 	CacheService    *MarkerCacheService
+	RedisService    *RedisService
 	Logger          *zap.Logger
 }
 
 func NewReportService(db *sqlx.DB, s3Service *S3Service,
 	location *MarkerLocationService,
 	cache *MarkerCacheService,
+	redis *RedisService,
 	logger *zap.Logger) *ReportService {
 	return &ReportService{
 		DB:              db,
 		S3Service:       s3Service,
 		LocationService: location,
 		CacheService:    cache,
+		RedisService:    redis,
 		Logger:          logger,
 	}
 }
@@ -414,7 +417,7 @@ func (s *ReportService) ApproveReport(reportID, userID int) error {
 	}
 
 	// Add comment as admin
-	commentService := NewMarkerCommentService(s.DB)
+	commentService := NewMarkerCommentService(s.DB, s.RedisService)
 	_, err = commentService.CreateCommentTx(tx, report.MarkerID, 1, "k-pullup", commentText)
 	if err != nil {
 		return fmt.Errorf("failed to create comment: %w", err)

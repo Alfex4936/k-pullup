@@ -37,22 +37,21 @@ func NewChatHandler(chat *service.ChatService, cutil *util.ChatUtil, butil *util
 // RegisterChatRoutes sets up the routes for chat handling within the application.
 func RegisterChatRoutes(api fiber.Router, websocketConfig websocket.Config, handler *ChatHandler) {
 	api.Get("/ws/:markerID", func(c *fiber.Ctx) error {
-		// TODO: update on adding ban feature on admin API in frontend
 		// Extract markerID from the parameter
-		// markerID := c.Params("markerID")
-		// reqID := c.Query("request-id")
+		markerID := c.Params("markerID")
+		reqID := c.Query("request-id")
 
 		// Use GetBanDetails to check if the user is banned and get the remaining ban time
-		// banned, remainingTime, err := handler.ChatService.GetBanDetails(markerID, reqID)
-		// if err != nil {
-		// 	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Internal server error"})
-		// }
-		// if banned {
-		// 	return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-		// 		"error":         "User is banned",
-		// 		"remainingTime": remainingTime.Seconds(), // Respond with remaining time in seconds
-		// 	})
-		// }
+		banned, remainingTime, err := handler.ChatService.GetBanDetails(markerID, reqID)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Internal server error"})
+		}
+		if banned {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"error":         "User is banned",
+				"remainingTime": remainingTime.Seconds(), // Respond with remaining time in seconds
+			})
+		}
 
 		// Proceed with WebSocket upgrade if not banned
 		if websocket.IsWebSocketUpgrade(c) {
@@ -178,10 +177,25 @@ func (h *ChatHandler) HandleChatRoom(c *websocket.Conn, markerID, reqID string) 
 		if bytes.Equal(message, []byte(`{"type":"ping"}`)) {
 			// if mType == 9 || mType == 10 {
 			h.ChatService.UpdateLastPing(markerID, clientID)
+
+			// Check if user is banned during ping (periodic ban check)
+			banned, _, err := h.ChatService.GetBanDetails(markerID, clientID)
+			if err == nil && banned {
+				// User was banned while connected, close connection
+				break
+			}
+
 			// if err := c.WriteMessage(websocket.TextMessage, []byte("pong")); err != nil {
 			// 	log.Printf("Error sending 'pong': %v", err)
 			// }
 			continue // Skip further processing for this message
+		}
+
+		// Check if user is banned before processing any message
+		banned, _, err := h.ChatService.GetBanDetails(markerID, clientID)
+		if err == nil && banned {
+			// User is banned, close connection
+			break
 		}
 
 		message = bytes.TrimSpace(message)

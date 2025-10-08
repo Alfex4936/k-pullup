@@ -41,16 +41,35 @@ WHERE C.MarkerID = ? AND C.DeletedAt IS NULL`
 )
 
 type MarkerCommentService struct {
-	DB *sqlx.DB
+	DB           *sqlx.DB
+	RedisService *RedisService
 }
 
-func NewMarkerCommentService(db *sqlx.DB) *MarkerCommentService {
+func NewMarkerCommentService(db *sqlx.DB, redisService *RedisService) *MarkerCommentService {
 	return &MarkerCommentService{
-		DB: db,
+		DB:           db,
+		RedisService: redisService,
 	}
 }
 
 type Comment = model.Comment
+
+// GetUserCommentCreationStatus returns the current and remaining comment creation count for a user today
+func (s *MarkerCommentService) GetUserCommentCreationStatus(userID int) (current int64, remaining int, err error) {
+	today := time.Now().Format("2006-01-02")
+
+	current, err = s.RedisService.GetCommentCreateCount(userID, today)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	remaining, err = s.RedisService.GetRemainingCommentCreates(userID, today)
+	if err != nil {
+		return current, 0, err
+	}
+
+	return current, remaining, nil
+}
 
 // CreateComment inserts a new comment into the database
 func (s *MarkerCommentService) CreateComment(markerID, userID int, userName, commentText string) (*dto.CommentWithUsername, error) {
@@ -62,6 +81,18 @@ func (s *MarkerCommentService) CreateComment(markerID, userID int, userName, com
 	}
 	if !exists {
 		return nil, ErrMarkerNotFound
+	}
+
+	// Check daily comment creation limit (15 per day per user)
+	today := time.Now().Format("2006-01-02") // YYYY-MM-DD format
+	if userID != 1 {                         // k-pullup (admin) is exempt from daily limit
+		currentCount, err := s.RedisService.GetCommentCreateCount(userID, today)
+		if err != nil {
+			// Log error but continue with creation if Redis fails (fail open)
+			// Could add logging here if logger is available
+		} else if currentCount >= 15 {
+			return nil, ErrDailyCommentLimitReached
+		}
 	}
 
 	// Check if the user has already commented 3 times on this marker
@@ -97,7 +128,17 @@ func (s *MarkerCommentService) CreateComment(markerID, userID int, userName, com
 	}
 	comment.CommentID = int(lastID)
 
-	if userID != 1 { // Send new comment to slack only if not admin
+	// Increment the daily comment creation count for the user (only if not admin)
+	if userID != 1 {
+		go func() {
+			_, err := s.RedisService.IncrementCommentCreateCount(userID, today)
+			if err != nil {
+				// Log error but don't fail the operation
+				// Could add logging here if logger is available
+			}
+		}()
+
+		// Send new comment to slack only if not admin
 		go util.SendSlackNewComment(markerID, userID, userName, commentText)
 	}
 

@@ -362,6 +362,27 @@ func (s *ChatService) GetUserCountInRoomByLocal(markerID string) (int, error) {
 	return 0, nil
 }
 
+// GetActiveUsersInRoom returns a list of active users in a room
+func (s *ChatService) GetActiveUsersInRoom(markerID string) ([]dto.ConnectionInfo, error) {
+	roomConns, ok := s.WebSocketManager.rooms.Load(markerID)
+	if !ok {
+		return nil, errors.New("room not found")
+	}
+
+	var users []dto.ConnectionInfo
+	roomConns.Range(func(clientID string, conn *ChulbongConn) bool {
+		users = append(users, dto.ConnectionInfo{
+			UserID:   conn.UserID,
+			RoomID:   markerID,
+			Username: conn.Nickname,
+			ConnID:   clientID,
+		})
+		return true
+	})
+
+	return users, nil
+}
+
 // GetAllRedisConnectionsFromRoom retrieves all connection information for a given room.
 func (s *ChatService) GetAllRedisConnectionsFromRoom(markerID string) ([]dto.ConnectionInfo, error) {
 	ctx := context.Background()
@@ -394,19 +415,51 @@ func (s *ChatService) GetAllRedisConnectionsFromRoom(markerID string) ([]dto.Con
 }
 
 func (s *ChatService) BanUser(markerID, userID string, duration time.Duration) error {
-	// First, kick the user from the room.
+	// First, send a ban notification message to the user if they're connected
+	if roomConns, ok := s.WebSocketManager.rooms.Load(markerID); ok {
+		if conn, ok := roomConns.Load(userID); ok {
+			// Send ban notification to the specific user
+			banMessage := fmt.Sprintf("⚠️ You have been banned for %.0f minutes. Reason: Administrative action.", duration.Minutes())
+			banPayload := createMessagePayload(markerID, banMessage, "System", "system")
+
+			select {
+			case conn.Send <- banPayload:
+				// Message sent successfully
+			default:
+				// Connection might be full or closed
+			}
+
+			// Give a moment for the message to be sent
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+
+	// Then, kick the user from the room.
 	err := s.KickUserFromRoom(markerID, userID)
 	if err != nil {
 		log.Printf("Error kicking user %s from room %s: %v", userID, markerID, err)
 	}
 
-	// Then, set the ban in Redis.
+	// Finally, set the ban in Redis.
 	banKey := fmt.Sprintf("ban_%s_%s", markerID, userID)
 	ctx := context.Background()
 
 	// Use Set to set the ban in Redis
 	cmd := s.Redis.Core.Client.B().Set().Key(banKey).Value("banned").Nx().Ex(duration).Build()
-	return s.Redis.Core.Client.Do(ctx, cmd).Error()
+	if err := s.Redis.Core.Client.Do(ctx, cmd).Error(); err != nil {
+		return fmt.Errorf("failed to set ban in Redis: %w", err)
+	}
+
+	// Broadcast to room that user was banned (optional)
+	nickname, _ := s.GetNickname(markerID, userID)
+	if nickname == "" {
+		nickname = "사용자"
+	}
+
+	banAnnouncementMsg := fmt.Sprintf("🚫 %s님이 관리자에 의해 차단되었습니다.", nickname)
+	s.BroadcastMessageToRoom(markerID, banAnnouncementMsg, "System", "system")
+
+	return nil
 }
 
 func (s *ChatService) GetBanDetails(markerID, userID string) (bool, time.Duration, error) {

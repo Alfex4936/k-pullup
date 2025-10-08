@@ -308,6 +308,23 @@ func (s *MarkerManageService) ClearCache() {
 	// s.byteCache.Delete(ctx, "allMarkers")
 }
 
+// GetUserMarkerCreationStatus returns the current and remaining marker creation count for a user today
+func (s *MarkerManageService) GetUserMarkerCreationStatus(userID int) (current int64, remaining int, err error) {
+	today := time.Now().Format("2006-01-02")
+
+	current, err = s.RedisService.GetMarkerCreateCount(userID, today)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	remaining, err = s.RedisService.GetRemainingMarkerCreates(userID, today)
+	if err != nil {
+		return current, 0, err
+	}
+
+	return current, remaining, nil
+}
+
 // GetAllMarkers now returns a simplified list of markers
 func (s *MarkerManageService) GetAllMarkers() ([]dto.MarkerSimple, error) {
 	var markers []dto.MarkerSimple
@@ -338,6 +355,210 @@ func (s *MarkerManageService) GetAllNewMarkers(page, pageSize int) ([]dto.Marker
 	}
 
 	return markers, nil
+}
+
+// processNewMarkerAsync handles post-creation marker processing asynchronously
+func (s *MarkerManageService) processNewMarkerAsync(markerID int64, latitude, longitude float64, description string, userID, photoCount int) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	// Step 1: Fetch and validate address with retries
+	address := s.fetchAddressWithRetries(ctx, markerID, latitude, longitude)
+	if address == "" {
+		return // Address fetch failed completely, already logged
+	}
+
+	// Step 2: Update database with address
+	if err := s.updateMarkerAddress(markerID, address); err != nil {
+		s.Logger.Error("Failed to update marker address",
+			zap.Int64("markerID", markerID),
+			zap.Error(err))
+		return
+	}
+
+	// Step 3: Index the marker for search
+	s.indexMarkerForSearch(markerID, address)
+
+	// Step 4: Send notifications (only for non-admin users)
+	if userID != 1 {
+		s.sendMarkerNotifications(ctx, markerID, address, description, latitude, longitude, photoCount)
+	}
+
+	// Step 5: Broadcast to chat rooms
+	s.broadcastNewMarkerMessage(markerID, address)
+}
+
+// fetchAddressWithRetries attempts to fetch address with exponential backoff
+func (s *MarkerManageService) fetchAddressWithRetries(ctx context.Context, markerID int64, latitude, longitude float64) string {
+	const (
+		maxRetries    = 3
+		baseDelay     = 2 * time.Second
+		maxDelay      = 30 * time.Second
+		backoffFactor = 2.0
+	)
+
+	var lastErr error
+
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		select {
+		case <-ctx.Done():
+			s.Logger.Warn("Address fetch cancelled",
+				zap.Int64("markerID", markerID),
+				zap.Error(ctx.Err()))
+			return ""
+		default:
+		}
+
+		if attempt > 0 {
+			delay := time.Duration(float64(baseDelay) * float64(attempt) * backoffFactor)
+			if delay > maxDelay {
+				delay = maxDelay
+			}
+
+			s.Logger.Info("Retrying address fetch",
+				zap.Int64("markerID", markerID),
+				zap.Int("attempt", attempt+1),
+				zap.Duration("delay", delay))
+
+			select {
+			case <-time.After(delay):
+			case <-ctx.Done():
+				return ""
+			}
+		}
+
+		// Try to fetch address
+		fetchedAddress, err := s.MarkerLocationService.FacilityService.FetchAddressFromMap(latitude, longitude)
+		if err == nil && fetchedAddress != "" {
+			return fetchedAddress
+		}
+
+		lastErr = err
+		s.Logger.Warn("Address fetch attempt failed",
+			zap.Int64("markerID", markerID),
+			zap.Int("attempt", attempt+1),
+			zap.Error(err))
+	}
+
+	// All retries failed, check if it's in restricted region
+	return s.handleAddressFetchFailure(markerID, latitude, longitude, lastErr, maxRetries)
+}
+
+// handleAddressFetchFailure processes the case when address fetch completely fails
+func (s *MarkerManageService) handleAddressFetchFailure(markerID int64, latitude, longitude float64, lastErr error, maxRetries int) string {
+	// Check if marker is in North Korea/Japan (restricted regions)
+	if regionCode, err := s.MarkerLocationService.FacilityService.FetchRegionFromAPI(latitude, longitude); err == nil {
+		if regionCode == "-2" {
+			s.Logger.Info("Deleting marker in restricted region",
+				zap.Int64("markerID", markerID),
+				zap.String("region", "restricted"))
+
+			if _, err := s.DB.Exec(deleteMarkerQuery, markerID); err != nil {
+				s.Logger.Error("Failed to delete restricted marker",
+					zap.Int64("markerID", markerID),
+					zap.Error(err))
+			}
+			return ""
+		}
+	}
+
+	// Log failure and create failure record
+	s.logAddressFetchFailure(markerID, latitude, longitude, lastErr, maxRetries)
+	return ""
+}
+
+// logAddressFetchFailure creates a record of address fetch failure
+func (s *MarkerManageService) logAddressFetchFailure(markerID int64, latitude, longitude float64, lastErr error, maxRetries int) {
+	var errMsg string
+	if lastErr != nil {
+		errMsg = fmt.Sprintf("Address fetch failed after %d attempts: %v", maxRetries, lastErr)
+	} else {
+		errMsg = fmt.Sprintf("No address found after %d attempts", maxRetries)
+	}
+
+	url := fmt.Sprintf("%sd=%d&la=%f&lo=%f",
+		s.MarkerLocationService.Config.ClientURL,
+		markerID, latitude, longitude)
+
+	if _, err := s.DB.Exec(insertMarkerFailureQuery, markerID, errMsg, url); err != nil {
+		s.Logger.Error("Failed to log address fetch failure",
+			zap.Int64("markerID", markerID),
+			zap.Error(err))
+	}
+}
+
+// updateMarkerAddress updates the marker's address in the database
+func (s *MarkerManageService) updateMarkerAddress(markerID int64, address string) error {
+	standardizedAddress := standardizeAddress(address)
+
+	if _, err := s.DB.Exec(updateAddressQuery, standardizedAddress, markerID); err != nil {
+		return fmt.Errorf("failed to update address: %w", err)
+	}
+
+	return nil
+}
+
+// indexMarkerForSearch adds the marker to the search index
+func (s *MarkerManageService) indexMarkerForSearch(markerID int64, address string) {
+	if err := s.BleveSearchService.InsertMarkerIndex(dto.MarkerIndexData{
+		MarkerID: int(markerID),
+		Address:  address,
+	}); err != nil {
+		s.Logger.Error("Failed to index marker for search",
+			zap.Int64("markerID", markerID),
+			zap.Error(err))
+	}
+}
+
+// sendMarkerNotifications sends external notifications (Slack, etc.)
+func (s *MarkerManageService) sendMarkerNotifications(ctx context.Context, markerID int64, address, description string, latitude, longitude float64, photoCount int) {
+	// Send Slack notification with timeout
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		util.SendSlackNewMarkerNotification(markerID, address, description, latitude, longitude, photoCount)
+	}()
+
+	select {
+	case <-done:
+		s.Logger.Debug("Slack notification sent", zap.Int64("markerID", markerID))
+	case <-time.After(10 * time.Second):
+		s.Logger.Warn("Slack notification timeout", zap.Int64("markerID", markerID))
+	case <-ctx.Done():
+		s.Logger.Warn("Slack notification cancelled", zap.Int64("markerID", markerID))
+	}
+}
+
+// broadcastNewMarkerMessage sends chat message to regional room
+func (s *MarkerManageService) broadcastNewMarkerMessage(markerID int64, address string) {
+	standardizedAddress := standardizeAddress(address)
+	regionCode := getRegionCode(standardizedAddress)
+
+	if regionCode == "" {
+		s.Logger.Debug("No region code found for broadcast",
+			zap.Int64("markerID", markerID),
+			zap.String("address", standardizedAddress))
+		return
+	}
+
+	message := dto.BroadcastMessage{
+		Timestamp:    time.Now().UnixMilli(),
+		UID:          xid.New().String(),
+		Message:      fmt.Sprintf("새로운 철봉 (%d): %s", markerID, standardizedAddress),
+		UserID:       "1",
+		UserNickname: "k-pullup",
+		RoomID:       regionCode,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := s.ChatService.SaveMessageToRedis(ctx, message); err != nil {
+		s.Logger.Error("Failed to broadcast marker message",
+			zap.Int64("markerID", markerID),
+			zap.String("regionCode", regionCode),
+			zap.Error(err))
+	}
 }
 
 // GetMarker retrieves a single marker and its associated photo by the marker's ID
@@ -411,6 +632,29 @@ func (s *MarkerManageService) GetAllMarkersByUserWithPagination(userID, page, pa
 	}
 
 	return markersWithDescription, total, nil
+}
+
+func (s *MarkerManageService) GetAllMarkersByUsernameWithPagination(username string, page, pageSize int) ([]dto.MarkerSimpleWithDescription, int, error) {
+	// Validate pagination parameters
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 50 { // Limit maximum pageSize to prevent abuse
+		pageSize = 10
+	}
+
+	// First get the UserID by username
+	var userID int
+	err := s.DB.Get(&userID, "SELECT UserID FROM Users WHERE Username = ?", username)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return []dto.MarkerSimpleWithDescription{}, 0, nil // Return empty slice if user not found
+		}
+		return nil, 0, fmt.Errorf("error finding user by username: %w", err)
+	}
+
+	// Use the existing method to get markers by userID
+	return s.GetAllMarkersByUserWithPagination(userID, page, pageSize)
 }
 
 func (s *MarkerManageService) GetMarkerSimpleWithDescription(markerID int) (dto.MarkerSimpleWithDescription, error) {
@@ -499,6 +743,16 @@ func (s *MarkerManageService) CheckMarkerValidity(latitude, longitude float64, d
 
 // TODO: _, err = tx.Exec("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
 func (s *MarkerManageService) CreateMarkerWithPhotos(ctx context.Context, markerDto *dto.MarkerRequest, userID int, form *multipart.Form) (*dto.MarkerResponse, error) {
+	// Check daily marker creation limit (10 per day per user)
+	today := time.Now().Format("2006-01-02") // YYYY-MM-DD format
+	currentCount, err := s.RedisService.GetMarkerCreateCount(userID, today)
+	if err != nil {
+		s.Logger.Error("Failed to get marker creation count", zap.Int("userID", userID), zap.Error(err))
+		// Continue with creation if Redis fails (fail open)
+	} else if currentCount >= 10 {
+		return nil, fiber.NewError(fiber.StatusTooManyRequests, "일일 마커 생성 한도(10개)에 도달했습니다. 내일 다시 시도해주세요.")
+	}
+
 	s.ClearCache()
 
 	// Begin a transaction for database operations
@@ -601,115 +855,18 @@ func (s *MarkerManageService) CreateMarkerWithPhotos(ctx context.Context, marker
 		return nil, fmt.Errorf("could not commit transaction: %w", err)
 	}
 
-	go func(markerID int64, latitude, longitude float64, pics int) {
-		maxRetries := 3
-		retryDelay := 5 * time.Second // Delay between retries
-
-		var address string
-		var err error
-
-		for attempt := 0; attempt < maxRetries; attempt++ {
-			if attempt > 0 {
-				s.Logger.Warn("Retrying to fetch address", zap.Int64("markerID", markerID), zap.Int("attempt", attempt))
-				time.Sleep(retryDelay) // Wait before retrying
-			}
-
-			address, err = s.MarkerLocationService.FacilityService.FetchAddressFromMap(latitude, longitude)
-			if err == nil && address != "" {
-				break // Success, exit the retry loop
-			}
-
-			s.Logger.Warn("Failed to fetch address", zap.Int("attempt", attempt), zap.Int64("markerID", markerID), zap.Error(err))
-		}
-
-		if err != nil || address == "" {
-			address2, _ := s.MarkerLocationService.FacilityService.FetchRegionFromAPI(latitude, longitude)
-			if address2 == "-2" {
-				// delete the marker 북한 or 일본
-				_, err = s.DB.Exec(deleteMarkerQuery, markerID)
-				if err != nil {
-					s.Logger.Error("Failed to delete marker", zap.Int64("markerID", markerID), zap.Error(err))
-				}
-				return // no need to insert in failures
-			}
-
-			var errMsg string
-			if err != nil {
-				errMsg = fmt.Sprintf("Final attempt failed to fetch address for marker %d: %v", markerID, err)
-			} else {
-				errMsg = fmt.Sprintf("No address found for marker %d after %d attempts", markerID, maxRetries)
-			}
-
-			// water, _ := s.MarkerLocationService.FacilityService.FetchRegionWaterInfo(latitude, longitude)
-			// if water {
-			// 	errMsg = fmt.Sprintf("The marker (%d) might be above on water", markerID)
-			// }
-
-			url := fmt.Sprintf("%sd=%d&la=%f&lo=%f", s.MarkerLocationService.Config.ClientURL, markerID, markerDto.Latitude, markerDto.Longitude)
-
-			if _, logErr := s.DB.Exec(insertMarkerFailureQuery, markerID, errMsg, url); logErr != nil {
-				s.Logger.Error("Failed to log address fetch failure", zap.Int64("markerID", markerID), zap.Error(logErr))
-			}
-			return
-		}
-
-		// Standardize the address
-		standardizedAddress := standardizeAddress(address)
-
-		// Update the marker's address in the database after successful fetch
-		_, err = s.DB.Exec(updateAddressQuery, standardizedAddress, markerID)
+	// Increment the daily marker creation count for the user
+	go func() {
+		_, err := s.RedisService.IncrementMarkerCreateCount(userID, today)
 		if err != nil {
-			s.Logger.Error("Failed to update address", zap.Int64("markerID", markerID), zap.Error(err))
+			s.Logger.Error("Failed to increment marker creation count",
+				zap.Int("userID", userID),
+				zap.String("date", today),
+				zap.Error(err))
 		}
+	}()
 
-		err = s.BleveSearchService.InsertMarkerIndex(dto.MarkerIndexData{MarkerID: int(markerID), Address: address})
-		if err != nil {
-			s.Logger.Error("Failed to index address", zap.Int64("markerID", markerID), zap.Error(err))
-		}
-
-		if userID != 1 { // not for admin
-			util.SendSlackNewMarkerNotification(markerID, address, markerDto.Description, latitude, longitude, pics)
-		}
-
-		regionCode := getRegionCode(standardizedAddress)
-		if regionCode == "" {
-			s.Logger.Error("Failed to determine region code", zap.Int64("markerID", markerID), zap.String("address", standardizedAddress))
-		} else {
-			message := dto.BroadcastMessage{
-				Timestamp:    time.Now().UnixMilli(),
-				UID:          xid.New().String(),
-				Message:      fmt.Sprintf("새로운 철봉 (%d): %s", markerID, standardizedAddress),
-				UserID:       "1",
-				UserNickname: "k-pullup",
-				RoomID:       regionCode,
-			}
-
-			// Call SaveMessageToRedis
-			err := s.ChatService.SaveMessageToRedis(context.Background(), message)
-			if err != nil {
-				s.Logger.Error("Failed to save message to Redis", zap.Error(err))
-			}
-		}
-
-		// userIDstr := strconv.Itoa(userID)
-		// updateMsg := fmt.Sprintf("새로운 철봉이 [ %s ]에 등록되었습니다!", address)
-		// metadata := notification.NotificationMarkerMetadata{
-		// 	MarkerID:  markerID,
-		// 	Latitude:  latitude,
-		// 	Longitude: longitude,
-		// 	Address:   address,
-		// }
-
-		// rawMetadata, _ := json.Marshal(metadata)
-		// PostNotification(userIDstr, "NewMarker", "k-pullup!", updateMsg, rawMetadata)
-
-		// TODO: update when frontend updates
-		// if address != "" {
-		// 	updateMsg := fmt.Sprintf("새로운 철봉이 등록되었습니다! %s", address)
-		// 	PublishMarkerUpdate(updateMsg)
-		// }
-
-	}(markerID, markerDto.Latitude, markerDto.Longitude, len(files))
+	go s.processNewMarkerAsync(markerID, markerDto.Latitude, markerDto.Longitude, markerDto.Description, userID, len(files))
 
 	// go s.MarkerLocationService.Redis.ResetAllCache(fmt.Sprintf("userMarkers:%d:page:*", userID))
 	go s.CacheService.RemoveUserMarker(userID, int(markerID))
