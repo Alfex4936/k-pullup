@@ -278,3 +278,16 @@ func (mfs *MarkerFacadeService) GetUserFromContext(c *fiber.Ctx) (*dto.UserData,
 func generateCacheKey(latitude, longitude float64) string {
 	return fmt.Sprintf("wcong:%f:%f", latitude, longitude)
 }
+
+// GetMarkerSimpleWithDescription returns a marker with description (stub implementation)
+func (mfs *MarkerFacadeService) GetMarkerSimpleWithDescription(markerID int) (*dto.MarkerSimpleWithDescription, error) {
+	// TODO: Implement actual logic
+	return nil, fmt.Errorf("GetMarkerSimpleWithDescription not implemented")
+}
+
+// GetAllMarkersByUsernameWithPagination returns markers by username with pagination (stub implementation)
+func (mfs *MarkerFacadeService) GetAllMarkersByUsernameWithPagination(username string, page, pageSize int) ([]dto.MarkerSimpleWithDescription, int, error) {
+	// TODO: Implement actual logic
+	// Returns (markers, total_count, error)
+	return []dto.MarkerSimpleWithDescription{}, 0, nil
+}

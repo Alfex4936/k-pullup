@@ -759,7 +759,9 @@ func (h *MarkerHandler) HandleAddFavorite(c *fiber.Ctx) error {
 			//log.Printf("Failed to get one to cache: %v", markerErr)
 			return
 		}
-		h.CacheService.AddSingleFavoriteToCache(userData.UserID, marker)
+		if marker != nil {
+			h.CacheService.AddSingleFavoriteToCache(userData.UserID, *marker)
+		}
 	}()
 
 	// Successfully added the favorite
