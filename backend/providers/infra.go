@@ -53,6 +53,8 @@ func NewRedis(lifecycle fx.Lifecycle, logger *zap.Logger) (*service.RedisClient,
 		DisableCache:      true, // dragonfly doesn't support CACHING command
 		SelectDB:          0,
 		ForceSingleClient: true,
+		// TODO: SECURITY ISSUE - InsecureSkipVerify should not be used in production
+		// This was inherited from original code but needs proper certificate validation
 		TLSConfig:         &tls.Config{InsecureSkipVerify: true},
 	})
 	if err != nil {
@@ -139,6 +141,8 @@ func reconnectRedis(logger *zap.Logger) (rueidis.Client, error) {
 			Username:     viper.GetString("REDIS_USERNAME"),
 			Password:     viper.GetString("REDIS_PASSWORD"),
 			DisableCache: true,
+			// TODO: SECURITY ISSUE - InsecureSkipVerify should not be used in production
+			// This was inherited from original code but needs proper certificate validation
 			TLSConfig:    &tls.Config{InsecureSkipVerify: true},
 		})
 		if err == nil {
