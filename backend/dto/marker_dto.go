@@ -164,3 +164,6 @@ type MarkersKakaoBot struct {
 	MarkerID  int     `json:"markerId" db:"MarkerID"`
 	UserID    int     `json:"userId,omitempty" db:"UserID"`
 }
+
+// Type alias to fix typo in original type name
+type MarkerSimpleWithDescription = MarkerSimpleWithDescrption

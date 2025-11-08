@@ -1,5 +1,7 @@
 package dto
 
+import "fmt"
+
 type OAuthGoogleUser struct {
 	ID           string `json:"id"`
 	Email        string `json:"email"`
@@ -42,4 +44,53 @@ type OAuthGitHubUser struct {
 	ID    int    `json:"id"`
 	Email string `json:"email"`
 	Name  string `json:"name"`
+}
+
+// OAuthUser is an interface for different OAuth provider users
+type OAuthUser interface {
+	GetID() string
+	GetEmail() string
+	GetName() string
+}
+
+// Implement OAuthUser interface for OAuthGoogleUser
+func (u *OAuthGoogleUser) GetID() string {
+	return u.ID
+}
+
+func (u *OAuthGoogleUser) GetEmail() string {
+	return u.Email
+}
+
+func (u *OAuthGoogleUser) GetName() string {
+	return u.Name
+}
+
+// Implement OAuthUser interface for OAuthKakaoUser
+func (u *OAuthKakaoUser) GetID() string {
+	return fmt.Sprintf("%d", u.ID)
+}
+
+func (u *OAuthKakaoUser) GetEmail() string {
+	return u.KakaoAccount.Email
+}
+
+func (u *OAuthKakaoUser) GetName() string {
+	if u.KakaoAccount.Profile.Nickname != "" {
+		return u.KakaoAccount.Profile.Nickname
+	}
+	return u.Properties.Nickname
+}
+
+// Implement OAuthUser interface for OAuthNaverUser
+func (u *OAuthNaverUser) GetID() string {
+	return u.Response.ID
+}
+
+func (u *OAuthNaverUser) GetEmail() string {
+	return u.Response.Email
+}
+
+func (u *OAuthNaverUser) GetName() string {
+	return u.Response.Nickname
 }

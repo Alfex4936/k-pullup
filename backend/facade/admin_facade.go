@@ -352,3 +352,44 @@ func (afs *AdminFacadeService) OptimizeImage(srcURL string, width, quality int, 
 
 	return resultBytes, contentType, nil
 }
+
+// GetActiveUsersInRoom returns active users in a chat room (stub implementation)
+func (afs *AdminFacadeService) GetActiveUsersInRoom(roomID int) ([]string, error) {
+	// TODO: Implement actual logic
+	return []string{}, nil
+}
+
+// GetUserCountInRoom returns the count of users in a chat room (stub implementation)
+func (afs *AdminFacadeService) GetUserCountInRoom(roomID int) (int, error) {
+	// TODO: Implement actual logic
+	return 0, nil
+}
+
+// OptimizeImageWithContext optimizes an image with context (stub implementation)
+func (afs *AdminFacadeService) OptimizeImageWithContext(ctx context.Context, file *multipart.FileHeader, quality int) ([]byte, string, error) {
+	// TODO: Implement actual logic with context
+	return nil, "", fmt.Errorf("OptimizeImageWithContext not implemented")
+}
+
+// GetUsersWithWarnings returns users with warning counts (stub implementation)
+func (afs *AdminFacadeService) GetUsersWithWarnings() ([]dto.UserWarningResponse, error) {
+	// TODO: Implement actual logic
+	return []dto.UserWarningResponse{}, nil
+}
+
+// UpdateUserWarning updates a user's warning count (stub implementation)
+func (afs *AdminFacadeService) UpdateUserWarning(userID int, action int, reason string) (*dto.UserWarningResponse, error) {
+	// TODO: Implement actual logic
+	return &dto.UserWarningResponse{
+		UserID:       userID,
+		Username:     "stub",
+		Email:        "stub@example.com",
+		WarningCount: 0,
+	}, nil
+}
+
+// GetUserCommentCreationStatus returns whether a user can create comments (stub implementation)
+func (afs *AdminFacadeService) GetUserCommentCreationStatus(userID int) (bool, error) {
+	// TODO: Implement actual logic
+	return true, nil
+}

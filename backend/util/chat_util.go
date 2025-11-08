@@ -117,6 +117,11 @@ func (c *ChatUtil) GenerateKoreanNickname() string {
 	return builder.String()
 }
 
+// GenerateUsernameForAuth is an alias for GenerateKoreanNickname for auth purposes
+func (c *ChatUtil) GenerateUsernameForAuth() string {
+	return c.GenerateKoreanNickname()
+}
+
 func (cu *ChatUtil) GetUserIP(c *fiber.Ctx) string {
 	if c == nil {
 		return ""

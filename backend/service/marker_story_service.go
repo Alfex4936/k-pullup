@@ -272,7 +272,7 @@ func (s *StoryService) AddStory(markerID int, userID int, caption string, photo 
 		Username:  username,
 		Caption:   caption,
 		PhotoURL:  photoURL,
-		Blurhash:  &blurhashString,
+		Blurhash:  blurhashString,
 		CreatedAt: time.Now(),
 		ExpiresAt: expiresAt,
 		Address:   address,
@@ -564,7 +564,7 @@ func (s *StoryService) UpdateStoryReactionInCache(
 				if story.StoryID == storyID {
 					stories[i].ThumbsUp = thumbsUp
 					stories[i].ThumbsDown = thumbsDown
-					stories[i].UserLiked = userLiked
+					stories[i].UserLiked = &userLiked
 					modified = true
 					break
 				}
