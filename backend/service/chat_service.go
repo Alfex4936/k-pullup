@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -159,7 +158,7 @@ func (s *ChatService) BroadcastUserCountToRoomByLocal(roomID string) {
 
 	// LAVINMQ:
 	if userCount > 0 {
-		message := roomID + " (" + strconv.Itoa(userCount) + "명 접속 중)"
+		message := fmt.Sprintf("%s (%d명 접속 중)", roomID, userCount)
 		// PublishMessageToAMQP(context.Background(), roomID, message, "chulbong-kr", "")
 
 		// Broadcast the user count message

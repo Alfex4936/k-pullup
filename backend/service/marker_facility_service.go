@@ -495,7 +495,7 @@ func (s *MarkerFacilityService) FetchLatestMarkers(thresholdDate time.Time) ([]D
 
 func (s *MarkerFacilityService) FetchRoadViewPicDate(latitude, longitude float64) (time.Time, error) {
 	wcong := util.ConvertWGS84ToWCONGNAMUL(latitude, longitude)
-	url := s.KakaoConfig.KakaoRoadViewAPI + "&PX=" + fmt.Sprintf("%f", wcong.X) + "&PY=" + fmt.Sprintf("%f", wcong.Y)
+	url := fmt.Sprintf("%s&PX=%f&PY=%f", s.KakaoConfig.KakaoRoadViewAPI, wcong.X, wcong.Y)
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {

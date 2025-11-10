@@ -458,7 +458,7 @@ func (s *AuthService) insertUserWithRetry(tx *sqlx.Tx, signUpReq *dto.SignUpRequ
 			username, signUpReq.Email, hashedPassword, signUpReq.Provider, signUpReq.ProviderID)
 		if err != nil {
 			if me, ok := err.(*mysql.MySQLError); ok && me.Number == 1062 { // Duplicate entry
-				username = username + "-" + s.TokenUtil.GenerateRandomString(5)
+				username = fmt.Sprintf("%s-%s", username, s.TokenUtil.GenerateRandomString(5))
 				continue
 			}
 			return 0, fmt.Errorf("error registering user: %w", err)
