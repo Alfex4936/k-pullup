@@ -1008,41 +1008,93 @@ func (s *MarkerManageService) UploadMarkerPhotoToS3(markerID int, files []*multi
 }
 
 func (s *MarkerManageService) CheckNearbyMarkersInDB() ([]dto.MarkerGroup, error) {
-	markers, err := s.GetAllMarkers()
-	if err != nil {
-		return nil, fmt.Errorf("error fetching markers: %w", err)
+	// Optimized query: Use self-join to find all nearby marker pairs in a single query
+	// This eliminates the N+1 query problem where we previously queried for each marker individually
+	query := `
+		SELECT 
+			m1.MarkerID AS CentralMarkerID,
+			ST_X(m1.Location) AS CentralLatitude,
+			ST_Y(m1.Location) AS CentralLongitude,
+			m1.Address AS CentralAddress,
+			m2.MarkerID AS NearbyMarkerID,
+			ST_X(m2.Location) AS NearbyLatitude,
+			ST_Y(m2.Location) AS NearbyLongitude,
+			m2.Description AS NearbyDescription,
+			m2.Address AS NearbyAddress,
+			ST_Distance_Sphere(m1.Location, m2.Location) AS distance
+		FROM Markers m1
+		CROSS JOIN Markers m2
+		WHERE m1.MarkerID != m2.MarkerID
+		AND ST_Distance_Sphere(m1.Location, m2.Location) <= 10
+		ORDER BY m1.MarkerID, distance ASC
+	`
+
+	type markerPair struct {
+		CentralMarkerID   int     `db:"CentralMarkerID"`
+		CentralLatitude   float64 `db:"CentralLatitude"`
+		CentralLongitude  float64 `db:"CentralLongitude"`
+		CentralAddress    *string `db:"CentralAddress"`
+		NearbyMarkerID    int     `db:"NearbyMarkerID"`
+		NearbyLatitude    float64 `db:"NearbyLatitude"`
+		NearbyLongitude   float64 `db:"NearbyLongitude"`
+		NearbyDescription string  `db:"NearbyDescription"`
+		NearbyAddress     *string `db:"NearbyAddress"`
+		Distance          float64 `db:"distance"`
 	}
 
-	var markerGroups []dto.MarkerGroup
+	var pairs []markerPair
+	err := s.DB.Select(&pairs, query)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching nearby markers: %w", err)
+	}
 
-	for _, marker := range markers {
-		point := formatPoint(marker.Latitude, marker.Longitude)
-
-		var nearbyMarkers []dto.MarkerWithDistance
-		err := s.DB.Select(&nearbyMarkers, findCloseMarkersAdminQuery, point, point, 10)
-		if err != nil {
-			return nil, fmt.Errorf("error checking for nearby markers: %w", err)
-		}
-
-		// 필터링하여 자기 자신을 제외한 마커만 포함시키기
-		var filteredNearbyMarkers []dto.MarkerWithDistance
-		for _, nMarker := range nearbyMarkers {
-			if nMarker.MarkerID != marker.MarkerID {
-				filteredNearbyMarkers = append(filteredNearbyMarkers, nMarker)
+	// Group results by central marker
+	groupMap := make(map[int]*dto.MarkerGroup)
+	for _, pair := range pairs {
+		// Get or create the marker group for this central marker
+		group, exists := groupMap[pair.CentralMarkerID]
+		if !exists {
+			group = &dto.MarkerGroup{
+				CentralMarker: dto.MarkerSimple{
+					MarkerID:  pair.CentralMarkerID,
+					Latitude:  pair.CentralLatitude,
+					Longitude: pair.CentralLongitude,
+					Address:   addressToString(pair.CentralAddress),
+				},
+				NearbyMarkers: make([]dto.MarkerWithDistance, 0),
 			}
+			groupMap[pair.CentralMarkerID] = group
 		}
 
-		// 주변에 다른 마커들이 있는 경우에만 결과에 추가
-		if len(filteredNearbyMarkers) > 0 {
-			markerGroup := dto.MarkerGroup{
-				CentralMarker: marker,
-				NearbyMarkers: filteredNearbyMarkers,
-			}
-			markerGroups = append(markerGroups, markerGroup)
-		}
+		// Add nearby marker to the group
+		group.NearbyMarkers = append(group.NearbyMarkers, dto.MarkerWithDistance{
+			MarkerSimple: dto.MarkerSimple{
+				MarkerID:  pair.NearbyMarkerID,
+				Latitude:  pair.NearbyLatitude,
+				Longitude: pair.NearbyLongitude,
+				Address:   addressToString(pair.NearbyAddress),
+			},
+			Distance:    pair.Distance,
+			Description: pair.NearbyDescription,
+			Address:     pair.NearbyAddress,
+		})
+	}
+
+	// Convert map to slice
+	markerGroups := make([]dto.MarkerGroup, 0, len(groupMap))
+	for _, group := range groupMap {
+		markerGroups = append(markerGroups, *group)
 	}
 
 	return markerGroups, nil
+}
+
+// Helper function to convert *string to string, returning empty string if nil
+func addressToString(addr *string) string {
+	if addr == nil {
+		return ""
+	}
+	return *addr
 }
 
 func (s *MarkerManageService) GenerateRSS() (string, error) {
