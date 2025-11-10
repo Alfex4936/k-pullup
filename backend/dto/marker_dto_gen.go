@@ -1741,7 +1741,7 @@ func (z *MarkerSimpleWithAddr) Msgsize() (s int) {
 }
 
 // DecodeMsg implements msgp.Decodable
-func (z *MarkerSimpleWithDescrption) DecodeMsg(dc *msgp.Reader) (err error) {
+func (z *MarkerSimpleWithDescription) DecodeMsg(dc *msgp.Reader) (err error) {
 	var field []byte
 	_ = field
 	var zb0001 uint32
@@ -1806,7 +1806,7 @@ func (z *MarkerSimpleWithDescrption) DecodeMsg(dc *msgp.Reader) (err error) {
 }
 
 // EncodeMsg implements msgp.Encodable
-func (z *MarkerSimpleWithDescrption) EncodeMsg(en *msgp.Writer) (err error) {
+func (z *MarkerSimpleWithDescription) EncodeMsg(en *msgp.Writer) (err error) {
 	// map header, size 6
 	// write "Latitude"
 	err = en.Append(0x86, 0xa8, 0x4c, 0x61, 0x74, 0x69, 0x74, 0x75, 0x64, 0x65)
@@ -1872,7 +1872,7 @@ func (z *MarkerSimpleWithDescrption) EncodeMsg(en *msgp.Writer) (err error) {
 }
 
 // MarshalMsg implements msgp.Marshaler
-func (z *MarkerSimpleWithDescrption) MarshalMsg(b []byte) (o []byte, err error) {
+func (z *MarkerSimpleWithDescription) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 6
 	// string "Latitude"
@@ -1897,7 +1897,7 @@ func (z *MarkerSimpleWithDescrption) MarshalMsg(b []byte) (o []byte, err error) 
 }
 
 // UnmarshalMsg implements msgp.Unmarshaler
-func (z *MarkerSimpleWithDescrption) UnmarshalMsg(bts []byte) (o []byte, err error) {
+func (z *MarkerSimpleWithDescription) UnmarshalMsg(bts []byte) (o []byte, err error) {
 	var field []byte
 	_ = field
 	var zb0001 uint32
@@ -1963,7 +1963,7 @@ func (z *MarkerSimpleWithDescrption) UnmarshalMsg(bts []byte) (o []byte, err err
 }
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z *MarkerSimpleWithDescrption) Msgsize() (s int) {
+func (z *MarkerSimpleWithDescription) Msgsize() (s int) {
 	s = 1 + 9 + msgp.Float64Size + 10 + msgp.Float64Size + 9 + msgp.IntSize + 10 + msgp.TimeSize + 12 + msgp.StringPrefixSize + len(z.Description) + 8 + msgp.StringPrefixSize + len(z.Address)
 	return
 }

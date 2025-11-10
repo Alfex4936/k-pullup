@@ -75,7 +75,7 @@ type MarkerNewResponse struct {
 	UserID    int     `json:"userId,omitempty" db:"UserID"`
 }
 
-type MarkerSimpleWithDescrption struct {
+type MarkerSimpleWithDescription struct {
 	Latitude    float64   `json:"latitude" db:"Latitude"`
 	Longitude   float64   `json:"longitude" db:"Longitude"`
 	MarkerID    int       `json:"markerId" db:"MarkerID"`

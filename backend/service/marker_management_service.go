@@ -1,13 +1,10 @@
 package service
 
 import (
-	"bytes"
 	"context"
 	"database/sql"
 	"encoding/xml"
 	"fmt"
-	"image"
-	"io"
 	"mime/multipart"
 	"os"
 	"strings"
@@ -803,8 +800,9 @@ func (s *MarkerManageService) CreateMarkerWithPhotos(ctx context.Context, marker
 			perTaskCtx, taskCancel := context.WithTimeout(taskCtx, 15*time.Second)
 			defer taskCancel()
 
-			// Upload the file to S3 using a context-aware method.
-			fileURL, thumbnailURL, err := s.S3Service.UploadFileToS3WithContext(perTaskCtx, folder, fileHeader, true)
+			// Upload the file to S3 and get the decoded image in one operation.
+			// This eliminates redundant file reads, improving performance.
+			fileURL, thumbnailURL, img, err := s.S3Service.UploadFileToS3WithImage(perTaskCtx, folder, fileHeader, true)
 			if err != nil {
 				select {
 				case errorChan <- fmt.Errorf("S3 upload failed: %w", err):
@@ -813,20 +811,7 @@ func (s *MarkerManageService) CreateMarkerWithPhotos(ctx context.Context, marker
 				return
 			}
 
-			file, _ := fileHeader.Open()
-			defer file.Close()
-
-			buf := new(bytes.Buffer)
-			_, _ = io.Copy(buf, file)
-			rawBytes := buf.Bytes()
-			img, _, err := image.Decode(bytes.NewReader(rawBytes))
-			if err != nil {
-				select {
-				case errorChan <- fmt.Errorf(" 이미지 디코딩 실패: %w", err):
-				default:
-				}
-				return
-			}
+			// Generate blurhash from the already-decoded image
 			blurhashString := util.EncodeBlurHashImage(img, 6, 5)
 
 			// Insert photo into the database

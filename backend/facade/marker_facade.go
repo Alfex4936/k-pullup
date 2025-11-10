@@ -113,7 +113,7 @@ func (mfs *MarkerFacadeService) GetAllMarkersWithAddr() ([]dto.MarkerSimpleWithA
 	return mfs.ManageService.GetAllMarkersWithAddr()
 }
 
-func (mfs *MarkerFacadeService) GetAllMarkersByUserWithPagination(userID, page, pageSize int) ([]dto.MarkerSimpleWithDescrption, int, error) {
+func (mfs *MarkerFacadeService) GetAllMarkersByUserWithPagination(userID, page, pageSize int) ([]dto.MarkerSimpleWithDescription, int, error) {
 	return mfs.ManageService.GetAllMarkersByUserWithPagination(userID, page, pageSize)
 }
 

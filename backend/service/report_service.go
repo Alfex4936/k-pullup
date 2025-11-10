@@ -1,12 +1,9 @@
 package service
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	"image"
-	"io"
 	"mime/multipart"
 	"sync"
 	"time"
@@ -309,8 +306,9 @@ func (s *ReportService) CreateReport(report *dto.MarkerReportRequest, form *mult
 		go func() {
 			defer wg.Done()
 
-			// Upload the file to S3 with thumbnail
-			fileURL, thumbnailURL, err := s.S3Service.UploadFileToS3WithContext(taskCtx, folder, fileHeader, true)
+			// Upload the file to S3 and get the decoded image in one operation.
+			// This eliminates redundant file reads, improving performance.
+			fileURL, thumbnailURL, img, err := s.S3Service.UploadFileToS3WithImage(taskCtx, folder, fileHeader, true)
 			if err != nil {
 				select {
 				case errorChan <- fmt.Errorf("S3 upload failed: %w", err):
@@ -319,21 +317,7 @@ func (s *ReportService) CreateReport(report *dto.MarkerReportRequest, form *mult
 				return
 			}
 
-			// Generate blurhash
-			file, _ := fileHeader.Open()
-			defer file.Close()
-
-			buf := new(bytes.Buffer)
-			_, _ = io.Copy(buf, file)
-			rawBytes := buf.Bytes()
-			img, _, err := image.Decode(bytes.NewReader(rawBytes))
-			if err != nil {
-				select {
-				case errorChan <- fmt.Errorf("image decoding failed: %w", err):
-				default:
-				}
-				return
-			}
+			// Generate blurhash from the already-decoded image
 			blurhashString := util.EncodeBlurHashImage(img, 6, 5)
 
 			// Insert photo with thumbnail and blurhash

@@ -69,7 +69,7 @@ func (mfs *UserFacadeService) SetRedisCache(key string, value interface{}, expir
 	return mfs.RedisService.SetCacheEntry(key, value, expiration)
 }
 
-func (mfs *UserFacadeService) GetAllFavorites(userID int) ([]dto.MarkerSimpleWithDescrption, error) {
+func (mfs *UserFacadeService) GetAllFavorites(userID int) ([]dto.MarkerSimpleWithDescription, error) {
 	return mfs.UserService.GetAllFavorites(userID)
 }
 

@@ -199,6 +199,85 @@ func (s *S3Service) UploadFileToS3WithContext(ctx context.Context, folder string
 	return fileURL, thumbnailURL, nil
 }
 
+// UploadFileToS3WithImage uploads a file to S3 and returns the URLs along with the decoded image.
+// This method reads the file only once, improving performance when the image is needed for further processing (e.g., blurhash).
+func (s *S3Service) UploadFileToS3WithImage(ctx context.Context, folder string, file *multipart.FileHeader, thumbnail bool) (string, string, image.Image, error) {
+	// Open the uploaded file
+	fileData, err := file.Open()
+	if err != nil {
+		return "", "", nil, err
+	}
+	defer fileData.Close()
+
+	// Read the entire file into memory once
+	fileBytes, err := io.ReadAll(fileData)
+	if err != nil {
+		return "", "", nil, fmt.Errorf("failed to read file: %w", err)
+	}
+
+	// Decode the image from the bytes
+	img, _, err := image.Decode(bytes.NewReader(fileBytes))
+	if err != nil {
+		return "", "", nil, fmt.Errorf("failed to decode image: %w", err)
+	}
+
+	// Generate a UUID for a unique filename
+	uuid, err := uuid.NewRandom()
+	if err != nil {
+		return "", "", nil, fmt.Errorf("failed to generate UUID: %w", err)
+	}
+
+	// Extract and lowercase the file extension
+	ext := filepathExtLower(file.Filename)
+
+	// Use the original file's extension but with a new UUID as the filename
+	// Estimate the key length: folder + '/' + UUID + ext
+	keyLen := len(folder) + 1 + 36 + len(ext)
+	keyBytes := make([]byte, 0, keyLen)
+	keyBytes = append(keyBytes, folder...)
+	keyBytes = append(keyBytes, '/')
+	keyBytes = appendUUID(keyBytes, uuid)
+	keyBytes = append(keyBytes, ext...)
+
+	// Convert keyBytes to string without allocation
+	key := util.BytesToString(keyBytes)
+
+	var thumbnailURL string
+
+	// If thumbnail is requested and file is an image, generate the thumbnail
+	if thumbnail && isImage(ext) {
+		// Use the already-decoded image to generate thumbnail, avoiding redundant decoding
+		thumbnailURL, err = s.GenerateThumbnailFromImage(ctx, img, folder, uuid.String(), ext)
+		if err != nil {
+			s.logger.Error("failed to generate or upload thumbnail", zap.Error(err))
+		}
+	}
+
+	// Upload the file to S3 using the bytes we've already read
+	_, err = s.s3Client.PutObject(ctx, &s3.PutObjectInput{
+		Bucket: &s.Config.S3BucketName,
+		Key:    &key,
+		Body:   bytes.NewReader(fileBytes),
+	})
+	if err != nil {
+		return "", "", nil, fmt.Errorf("failed to upload file to S3: %w", err)
+	}
+
+	// Construct the file URL
+	// Estimate the URL length: "https://" + bucket + ".s3.amazonaws.com/" + key
+	urlLen := 8 + len(s.Config.S3BucketName) + 17 + len(key)
+	urlBytes := make([]byte, 0, urlLen)
+	urlBytes = append(urlBytes, "https://"...)
+	urlBytes = append(urlBytes, s.Config.S3BucketName...)
+	urlBytes = append(urlBytes, ".s3.amazonaws.com/"...)
+	urlBytes = append(urlBytes, keyBytes...)
+
+	// Convert urlBytes to string without allocation
+	fileURL := util.BytesToString(urlBytes)
+
+	return fileURL, thumbnailURL, img, nil
+}
+
 // DeleteDataFromS3 deletes a photo and its thumbnail from S3 given its URL.
 func (s *S3Service) DeleteDataFromS3(dataURL string) error {
 	var bucketName, key string
@@ -406,6 +485,57 @@ func (s *S3Service) GenerateThumbnail(ctx context.Context, fileData multipart.Fi
 
 	// Upload thumbnail to S3
 	_, err = s.s3Client.PutObject(ctx, &s3.PutObjectInput{
+		Bucket: &s.Config.S3BucketName,
+		Key:    &thumbKey,
+		Body:   bytes.NewReader(buf.Bytes()),
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to upload thumbnail to S3: %w", err)
+	}
+
+	thumbURL := fmt.Sprintf("https://%s.s3.amazonaws.com/%s", s.Config.S3BucketName, thumbKey)
+
+	return thumbURL, nil
+}
+
+// GenerateThumbnailFromImage generates a thumbnail from an already-decoded image.
+// This method is more efficient when the image has already been decoded for other purposes.
+func (s *S3Service) GenerateThumbnailFromImage(ctx context.Context, img image.Image, folder, uuidStr, ext string) (string, error) {
+	// Generate thumbnail
+	thumbImg := imaging.Thumbnail(img, 300, 300, imaging.Lanczos)
+
+	// Encode thumbnail to buffer
+	var buf bytes.Buffer
+	switch ext {
+	case ".jpg", ".jpeg":
+		err := jpeg.Encode(&buf, thumbImg, nil)
+		if err != nil {
+			return "", fmt.Errorf("failed to encode thumbnail: %w", err)
+		}
+	case ".png":
+		err := png.Encode(&buf, thumbImg)
+		if err != nil {
+			return "", fmt.Errorf("failed to encode thumbnail: %w", err)
+		}
+	case ".gif":
+		err := gif.Encode(&buf, thumbImg, nil)
+		if err != nil {
+			return "", fmt.Errorf("failed to encode thumbnail: %w", err)
+		}
+	case ".webp":
+		err := webp.Encode(&buf, thumbImg, nil)
+		if err != nil {
+			return "", fmt.Errorf("failed to encode thumbnail: %w", err)
+		}
+	default:
+		return "", fmt.Errorf("unsupported image format: %s", ext)
+	}
+
+	// Generate thumbnail key (e.g., append "_thumb" before extension)
+	thumbKey := fmt.Sprintf("%s/%s_thumb%s", folder, uuidStr, ext)
+
+	// Upload thumbnail to S3
+	_, err := s.s3Client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket: &s.Config.S3BucketName,
 		Key:    &thumbKey,
 		Body:   bytes.NewReader(buf.Bytes()),

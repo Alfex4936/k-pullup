@@ -33,10 +33,10 @@ type UserData struct {
 }
 
 type UserMarkers struct {
-	MarkersWithPhotos []MarkerSimpleWithDescrption `json:"markers"`
-	CurrentPage       int                          `json:"currentPage"`
-	TotalPages        int                          `json:"totalPages"`
-	TotalMarkers      int                          `json:"totalMarkers"`
+	MarkersWithPhotos []MarkerSimpleWithDescription `json:"markers"`
+	CurrentPage       int                           `json:"currentPage"`
+	TotalPages        int                           `json:"totalPages"`
+	TotalMarkers      int                           `json:"totalMarkers"`
 }
 
 // User corresponds to the Users table in the database
