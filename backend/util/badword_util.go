@@ -11,7 +11,6 @@ import (
 	"unicode/utf8"
 	"unsafe"
 
-	"github.com/rrethy/ahocorasick"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -22,8 +21,8 @@ type BadWordUtil struct {
 	BadWordsListByte [][]byte
 	BadWordsList     []string
 	BadWordRegex     *regexp.Regexp
-	Matcher          *ahocorasick.Matcher
-	ByteMatcher      *ahocorasick.Matcher
+	Matcher          *Matcher
+	ByteMatcher      *Matcher
 }
 
 func NewBadWordUtil() *BadWordUtil {
@@ -142,68 +141,76 @@ func (b *BadWordUtil) CheckForBadWordsWithGoRoutine(input string) (bool, error) 
 
 func (b *BadWordUtil) ReplaceBadWords(input string) (string, error) {
 	if b.Matcher == nil {
-		b.Matcher = ahocorasick.CompileStrings(b.BadWordsList)
+		b.Matcher = CompileStrings(b.BadWordsList)
 		return input, errors.New("bad words matcher not initialized")
 	}
 
-	matches := b.Matcher.FindAllString(input)
-	if len(matches) == 0 {
-		return input, nil // No matches, return original input
+	mask := make([]bool, len(input))
+	matchesFound := false
+
+	b.Matcher.IterateString(input, func(word string, start int) bool {
+		matchesFound = true
+		end := start + len(word)
+		for k := start; k < end; k++ {
+			mask[k] = true
+		}
+		return true
+	})
+
+	if !matchesFound {
+		return input, nil
 	}
 
-	runes := []rune(input)
-	replaced := make([]bool, len(runes))
-	runeIndices := computeRuneIndices(input) // Precompute indices
+	var sb strings.Builder
+	sb.Grow(len(input))
 
-	// Apply replacements for each match
-	for _, match := range matches {
-		matchStart := runeIndices[match.Index]
-		matchEnd := runeIndices[match.Index+len(match.Word)]
-
-		for i := matchStart; i < matchEnd; i++ {
-			if !replaced[i] {
-				runes[i] = '*'
-				replaced[i] = true
-			}
+	i := 0
+	for i < len(input) {
+		r, size := utf8.DecodeRuneInString(input[i:])
+		if mask[i] {
+			sb.WriteRune('*')
+			i += size
+		} else {
+			sb.WriteRune(r)
+			i += size
 		}
 	}
 
-	return string(runes), nil
+	return sb.String(), nil
 }
 
 func (b *BadWordUtil) ReplaceBadWordsInBytes(input []byte) ([]byte, error) {
 	if b.Matcher == nil {
-		b.ByteMatcher = ahocorasick.CompileByteSlices(b.BadWordsListByte)
+		b.ByteMatcher = CompileByteSlices(b.BadWordsListByte)
 		return input, errors.New("bad words matcher not initialized")
 	}
 
-	matches := b.Matcher.FindAllByteSlice(input)
-	if len(matches) == 0 {
-		return input, nil // No matches, return original input
-	}
+	mask := make([]bool, len(input))
+	matchesFound := false
 
-	// Create a map to mark bytes that are part of matches
-	matchedBytes := make([]bool, len(input))
-	for _, match := range matches {
-		for i := match.Index; i < match.Index+len(match.Word); i++ {
-			matchedBytes[i] = true
+	b.ByteMatcher.Iterate(input, func(word []byte, start int) bool {
+		matchesFound = true
+		end := start + len(word)
+		for k := start; k < end; k++ {
+			mask[k] = true
 		}
+		return true
+	})
+
+	if !matchesFound {
+		return input, nil
 	}
 
-	// Process the input bytes, decoding runes, and building output bytes
 	var output []byte
+	// output = make([]byte, 0, len(input))
+
 	i := 0
 	for i < len(input) {
-		if matchedBytes[i] {
-			// Replace the entire rune with '*'
+		if mask[i] {
 			_, size := utf8.DecodeRune(input[i:])
 			output = append(output, '*')
 			i += size
-			// Skip any additional bytes that are part of the matched word
-			// These are already accounted for in matchedBytes
-			// No need to do anything else here
 		} else {
-			// Copy the rune as is
 			_, size := utf8.DecodeRune(input[i:])
 			output = append(output, input[i:i+size]...)
 			i += size
@@ -229,23 +236,6 @@ func RemoveURLs(input string) string {
 func RemoveURLsFromBytes(message []byte) []byte {
 	return urlRegex.ReplaceAll(message, []byte(""))
 }
-
-// func CheckForBadWords(input string) (bool, error) {
-// 	// TODO: Normalize input for comparison
-
-// 	// TODO: consider parallelizing
-// 	for _, word := range badWordsList {
-// 		if word == "" {
-// 			continue
-// 		}
-
-// 		// Check if the bad word is a substring of the input
-// 		if strings.Contains(input, word) {
-// 			return true, nil
-// 		}
-// 	}
-// 	return false, nil
-// }
 
 // LoadBadWords loads bad words from a file into memory with optimizations.
 func (b *BadWordUtil) LoadBadWords(filePath string) error {
@@ -277,10 +267,8 @@ func (b *BadWordUtil) LoadBadWords(filePath string) error {
 	// Optimize memory usage by shrinking the slice to the actual number of words.
 	b.BadWordsList = append([]string{}, b.BadWordsList...)
 
-	// go CompileBadWordsPattern() // Compile in a goroutine if it's safe to do asynchronously.
-
 	// Compile the list of bad words into a trie (Aho-corasick Double-Array Trie)
-	b.Matcher = ahocorasick.CompileStrings(b.BadWordsList)
+	b.Matcher = CompileStrings(b.BadWordsList)
 	return nil
 }
 
@@ -309,58 +297,30 @@ func (b *BadWordUtil) LoadBadWordsByte(filePath string) error {
 		return err
 	}
 
-	b.ByteMatcher = ahocorasick.CompileByteSlices(b.BadWordsListByte)
+	b.ByteMatcher = CompileByteSlices(b.BadWordsListByte)
 	return nil
 }
 
 // CheckForBadWordsUsingTrie checks if the input contains any bad words using Aho-Corasick trie
 func (b *BadWordUtil) CheckForBadWordsUsingTrie(input string) (bool, error) {
 	if b.Matcher == nil {
-		b.Matcher = ahocorasick.CompileStrings(b.BadWordsList)
+		b.Matcher = CompileStrings(b.BadWordsList)
 		return false, os.ErrNotExist
 	}
-	matches := b.Matcher.FindAllString(input)
-	return len(matches) > 0, nil
+	found := false
+	b.Matcher.IterateString(input, func(word string, start int) bool {
+		found = true
+		return false // Start after first match
+	})
+	return found, nil
 }
 
-// - fasthttp
-
 // BytesToString converts a byte slice to a string without making a copy.
-//
-// Warning: This method uses unsafe operations. The conversion is safe as long as the original
-// byte slice is not modified after conversion, as the resulting string will reference
-// the same underlying memory.
-//
-// Example:
-//
-//	b := []byte("Hello")
-//	s := BytesToString(b) // Converts []byte to string without memory allocation
-//	fmt.Println(s)        // Prints: Hello
-//
-// Important: Do not modify the byte slice `b` after calling this function, as the string `s`
-// references the same memory, and changes to `b` will lead to undefined behavior.
 func BytesToString(b []byte) string {
-	// if len(b) == 0 {
-	// 	return ""
-	// }
 	return unsafe.String(&b[0], len(b))
-	// return *(*string)(unsafe.Pointer(&b))
 }
 
 // StringToBytes converts a string to a byte slice without making a copy.
-//
-// Warning: This method uses unsafe operations. The conversion is safe as long as the
-// resulting byte slice is not modified. Since strings in Go are immutable, modifying
-// the byte slice will result in undefined behavior.
-//
-// Example:
-//
-//	s := "Hello"
-//	b := StringToBytes(s) // Converts string to []byte without memory allocation
-//	fmt.Println(b)        // Prints: [72 101 108 108 111] (ASCII values of "Hello")
-//
-// Important: Do not modify the byte slice `b` after calling this function, as strings in Go
-// are immutable, and modifying the byte slice can lead to undefined behavior.
 func StringToBytes(s string) []byte {
 	return unsafe.Slice(unsafe.StringData(s), len(s))
 }
@@ -379,7 +339,7 @@ func computeRuneIndices(input string) []int {
 	return runeIndices
 }
 
-// By official doc, Slice(ptr, len) => like (*[len]T)(ptr)[:]
+// SliceFromPointer creates a slice from a pointer and a length.
 func SliceFromPointer[T any](base unsafe.Pointer, length int) []T {
 	return unsafe.Slice((*T)(base), length)
 }

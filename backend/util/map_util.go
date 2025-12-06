@@ -72,8 +72,8 @@ const (
 	// KakaoMap specific scale
 	kakaoScale = 2.5
 
-	radiansPerDegree = math.Pi / 180.0
-	degreesPerRadian = 180.0 / math.Pi
+	RadiansPerDegree = math.Pi / 180.0
+	DegreesPerRadian = 180.0 / math.Pi
 )
 
 // Map for provinces and major regions
@@ -388,8 +388,6 @@ var cityMap = map[string]struct{}{
 }
 
 var (
-	wConst = math.Atan(1) / 45 // Precomputed constant value
-
 	provinceRadix *iradix.Tree[int] = iradix.New[int]()
 	cityRadix     *iradix.Tree[int] = iradix.New[int]()
 )
@@ -478,7 +476,7 @@ type WCONGNAMULCoord struct {
 // ConvertWGS84ToWCONGNAMUL converts coordinates from WGS84 to WCONGNAMUL.
 // Implementation uses Transverse Mercator projection (Krüger n-series).
 func ConvertWGS84ToWCONGNAMUL(lat, long float64) WCONGNAMULCoord {
-	e, n := tmForward(lat*radiansPerDegree, long*radiansPerDegree)
+	e, n := tmForward(lat*RadiansPerDegree, long*RadiansPerDegree)
 	return WCONGNAMULCoord{
 		X: math.Round(e * kakaoScale),
 		Y: math.Round(n * kakaoScale),
@@ -492,26 +490,8 @@ func ConvertWCONGToWGS84(x, y float64) (float64, float64) {
 	n := y / kakaoScale
 
 	latRad, lonRad := tmInverse(e, n)
-	return latRad * degreesPerRadian, lonRad * degreesPerRadian
+	return latRad * DegreesPerRadian, lonRad * DegreesPerRadian
 }
-
-// Ellipsoid parameters precomputed
-var (
-	n     = fWGS84 / (2.0 - fWGS84)
-	alpha = []float64{
-		1.0 / 2.0 * n,
-		2.0 / 3.0 * n * n,
-		5.0 / 16.0 * n * n * n,
-		41.0 / 180.0 * n * n * n * n,
-	}
-	beta = []float64{
-		1.0 / 2.0 * n,
-		2.0 / 3.0 * n * n,
-		37.0 / 96.0 * n * n * n,
-		1.0 / 360.0 * n * n * n * n,
-	}
-	A0 = majorAxisWGS84 / (1.0 + n) * (1.0 + n*n/4.0 + n*n*n*n/64.0)
-)
 
 // tmForward converts (lat, lon) in radians to TM (E, N)
 // Based on Krüger series expansion (order 4).
