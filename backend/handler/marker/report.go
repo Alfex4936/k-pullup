@@ -1,4 +1,4 @@
-package handler
+package marker
 
 import (
 	"errors"
@@ -10,10 +10,9 @@ import (
 	"github.com/Alfex4936/chulbong-kr/middleware"
 	"github.com/Alfex4936/chulbong-kr/service"
 	"github.com/Alfex4936/chulbong-kr/util"
-	"go.uber.org/zap"
-
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	"go.uber.org/zap"
 )
 
 // RegisterReportRoutes sets up the routes for report handling within the application.
@@ -39,7 +38,6 @@ func RegisterReportRoutes(api fiber.Router, handler *MarkerHandler, authMiddlewa
 		reportGroup.Post("/deny/:reportID", authMiddleware.Verify, handler.HandleDenyReport)
 
 		reportGroup.Delete("", authMiddleware.Verify, handler.HandleDeleteReport)
-
 	}
 }
 
@@ -56,7 +54,7 @@ func RegisterReportRoutes(api fiber.Router, handler *MarkerHandler, authMiddlewa
 // @Failure 404 {object} map[string]string "No reports found"
 // @Failure 500 {object} map[string]string "Failed to retrieve reports"
 // @Router /api/v1/markers/reports/all [get]
-func (h *MarkerHandler) HandleGetAllReports(c *fiber.Ctx) error {
+func (h *MarkerReportHandler) HandleGetAllReports(c *fiber.Ctx) error {
 	reports, err := h.MarkerFacadeService.GetAllReports()
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to get reports"})
@@ -66,7 +64,6 @@ func (h *MarkerHandler) HandleGetAllReports(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"message": "No reports found"})
 	}
 
-	// Group reports by MarkerID
 	groupedReports := make(map[int]dto.MarkerReports)
 	for _, report := range reports {
 		groupedReports[report.MarkerID] = dto.MarkerReports{
@@ -74,7 +71,6 @@ func (h *MarkerHandler) HandleGetAllReports(c *fiber.Ctx) error {
 		}
 	}
 
-	// Create response structure
 	response := dto.ReportsResponse{
 		TotalReports: len(reports),
 		Markers:      groupedReports,
@@ -97,7 +93,7 @@ func (h *MarkerHandler) HandleGetAllReports(c *fiber.Ctx) error {
 // @Failure 400 {object} map[string]string "Invalid Marker ID"
 // @Failure 500 {object} map[string]string "Failed to retrieve reports"
 // @Router /api/v1/markers/reports/marker/{markerID} [get]
-func (h *MarkerHandler) HandleGetMarkerReports(c *fiber.Ctx) error {
+func (h *MarkerReportHandler) HandleGetMarkerReports(c *fiber.Ctx) error {
 	markerID, err := strconv.Atoi(c.Params("markerID"))
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid Marker ID"})
@@ -134,15 +130,12 @@ func (h *MarkerHandler) HandleGetMarkerReports(c *fiber.Ctx) error {
 // @Failure 409 {object} map[string]string "Check if the marker exists or upload at least one photo"
 // @Failure 500 {object} map[string]string "Failed to create report"
 // @Router /api/v1/markers/reports [post]
-func (h *MarkerHandler) HandleCreateReport(c *fiber.Ctx) error {
-	// Parse the multipart form
+func (h *MarkerReportHandler) HandleCreateReport(c *fiber.Ctx) error {
 	form, err := c.MultipartForm()
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "failed to parse form"})
 	}
 
-	// Check if latitude and longitude are provided
-	// if user didn't change, frontend must send original point
 	latitude, longitude, err := GetLatLngFromForm(form)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "failed to parse latitude and longitude"})
@@ -248,7 +241,7 @@ func (h *MarkerHandler) HandleCreateReport(c *fiber.Ctx) error {
 // @Failure 400 {object} map[string]string "Invalid report ID"
 // @Failure 500 {object} map[string]string "Unable to approve report"
 // @Router /api/v1/markers/reports/approve/{reportID} [post]
-func (h *MarkerHandler) HandleApproveReport(c *fiber.Ctx) error {
+func (h *MarkerReportHandler) HandleApproveReport(c *fiber.Ctx) error {
 	reportID, err := strconv.Atoi(c.Params("reportID"))
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid report ID"})
@@ -277,7 +270,7 @@ func (h *MarkerHandler) HandleApproveReport(c *fiber.Ctx) error {
 // @Failure 400 {object} map[string]string "Invalid report ID"
 // @Failure 500 {object} map[string]string "Unable to deny report"
 // @Router /api/v1/markers/reports/deny/{reportID} [post]
-func (h *MarkerHandler) HandleDenyReport(c *fiber.Ctx) error {
+func (h *MarkerReportHandler) HandleDenyReport(c *fiber.Ctx) error {
 	reportID, err := strconv.Atoi(c.Params("reportID"))
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid report ID"})
@@ -289,7 +282,7 @@ func (h *MarkerHandler) HandleDenyReport(c *fiber.Ctx) error {
 	}
 
 	go h.MarkerFacadeService.SetMarkerCache(nil)
-	go h.MarkerFacadeService.ResetAllRedisCache(fmt.Sprintf("userMarkers:%d:page:*", userID))
+	go h.MarkerFacadeService.ResetAllRedisCache(fmt.Sprintf("user_markers:%d:page:*", userID))
 
 	return c.SendStatus(fiber.StatusOK)
 }
@@ -309,7 +302,7 @@ func (h *MarkerHandler) HandleDenyReport(c *fiber.Ctx) error {
 // @Failure 400 {object} map[string]string "Invalid report ID or marker ID"
 // @Failure 500 {object} map[string]string "Unable to remove report"
 // @Router /api/v1/markers/reports [delete]
-func (h *MarkerHandler) HandleDeleteReport(c *fiber.Ctx) error {
+func (h *MarkerReportHandler) HandleDeleteReport(c *fiber.Ctx) error {
 	reportID, err := strconv.Atoi(c.Query("reportID"))
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid report ID"})

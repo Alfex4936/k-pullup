@@ -58,19 +58,22 @@ const RadiusOfEarthMeters float64 = 6370986
 const KoreaTimeZone = "Asia/Seoul"
 
 const (
-	// Constants related to the WGS84 ellipsoid.
-	aWGS84           float64 = 6378137 // Semi-major axis.
-	flatteningFactor float64 = 0.0033528106647474805
+	// WGS84 Ellipsoid constants
+	majorAxisWGS84 = 6378137.0
+	fWGS84         = 1.0 / 298.257223563
 
-	// Constants for Korea TM projection.
-	k0               float64 = 1      // Scale factor.
-	dx               float64 = 500000 // False Easting.
-	dy               float64 = 200000 // False Northing.
-	lat0             float64 = 38     // Latitude of origin.
-	lon0             float64 = 127    // Longitude of origin.
-	RadiansPerDegree float64 = math.Pi / 180
-	RadiansToDegrees float64 = 180 / math.Pi
-	scaleFactor      float64 = 2.5
+	// TM Projection Parameters (Korea Central Belt 2010 / Kakao)
+	centerLat     = 38.0 * (math.Pi / 180.0)
+	centerLon     = 127.0 * (math.Pi / 180.0)
+	falseEasting  = 200000.0
+	falseNorthing = 500000.0
+	scaleFactor   = 1.0 // k0
+
+	// KakaoMap specific scale
+	kakaoScale = 2.5
+
+	radiansPerDegree = math.Pi / 180.0
+	degreesPerRadian = 180.0 / math.Pi
 )
 
 // Map for provinces and major regions
@@ -468,162 +471,159 @@ func (t *MapUtil) IsInSouthKoreaPrecisely(lat, lng float64) bool {
 // CONVERT ----------------------------------------------------------------
 // WCONGNAMULCoord represents a coordinate in the WCONGNAMUL system.
 type WCONGNAMULCoord struct {
-	X float64 // X coordinate
-	Y float64 // Y coordinate
+	X float64 // X coordinate (Easting-like)
+	Y float64 // Y coordinate (Northing-like)
 }
 
 // ConvertWGS84ToWCONGNAMUL converts coordinates from WGS84 to WCONGNAMUL.
+// Implementation uses Transverse Mercator projection (Krüger n-series).
 func ConvertWGS84ToWCONGNAMUL(lat, long float64) WCONGNAMULCoord {
-	x, y := transformWGS84ToKoreaTM(aWGS84, flatteningFactor, dx, dy, k0, lat0, lon0, lat, long)
-	return WCONGNAMULCoord{X: math.Round(x * scaleFactor), Y: math.Round(y * scaleFactor)}
-}
-
-// transformWGS84ToKoreaTM optimizes the coordinate conversion calculation.
-// func transformWGS84ToKoreaTM(aWGS84, flatteningFactor, dx, dy, k0, lat0, lon0, lat, long)
-func transformWGS84ToKoreaTM(aWGS84, flatteningFactor, dx, dy, k0, lat0, lon0, lat, lon float64) (float64, float64) {
-	latRad := lat * RadiansPerDegree
-	lonRad := lon * RadiansPerDegree
-	lRad := lat0 * RadiansPerDegree
-	mRad := lon0 * RadiansPerDegree
-
-	sinLat := math.Sin(latRad)
-	cosLat := math.Cos(latRad)
-	tanLat := sinLat / cosLat
-
-	// Precompute powers of cosLat
-	cosLat2 := cosLat * cosLat
-	cosLat3 := cosLat2 * cosLat
-	cosLat5 := cosLat3 * cosLat2
-	cosLat7 := cosLat5 * cosLat2
-
-	// Precompute repeated sines at multiple angles
-	sin2Lat := math.Sin(2 * latRad)
-	sin4Lat := math.Sin(4 * latRad)
-	sin6Lat := math.Sin(6 * latRad)
-	sin8Lat := math.Sin(8 * latRad)
-
-	sin2L := math.Sin(2 * lRad)
-	sin4L := math.Sin(4 * lRad)
-	sin6L := math.Sin(6 * lRad)
-	sin8L := math.Sin(8 * lRad)
-
-	// Since flatteningFactor < 1 for WGS84, we can remove the condition
-	w := 1 / flatteningFactor
-	z := aWGS84 * (w - 1) / w
-	dSquared := aWGS84 * aWGS84
-	zSquared := z * z
-	G := 1 - zSquared/dSquared
-	w = (dSquared - zSquared) / zSquared
-
-	// Simplify z calculation
-	z = (aWGS84 - z) / (aWGS84 + z)
-	z2 := z * z
-	z3 := z2 * z
-	z4 := z3 * z
-	z5 := z4 * z
-
-	E := aWGS84 * (1 - z + (5.0/4.0)*(z2-z3) + (81.0/64.0)*(z4-z5))
-	I := (3.0 / 2.0) * aWGS84 * (z - z2 + (7.0/8.0)*(z3-z4) + (55.0/64.0)*z5)
-	J := (15.0 / 16.0) * aWGS84 * (z2 - z3 + (3.0/4.0)*(z4-z5))
-	L := (35.0 / 48.0) * aWGS84 * (z3 - z4 + (11.0/16.0)*z5)
-	M := (315.0 / 512.0) * aWGS84 * (z4 - z5)
-
-	D := lonRad - mRad
-
-	// Compute u for lRad
-	u_l := E*lRad - I*sin2L + J*sin4L - L*sin6L + M*sin8L
-	z = u_l * k0
-
-	// G recalculated for lat
-	G = aWGS84 / math.Sqrt(1-G*sinLat*sinLat)
-
-	// Compute u for latRad
-	u_lat := E*latRad - I*sin2Lat + J*sin4Lat - L*sin6Lat + M*sin8Lat
-	o := u_lat * k0
-
-	// Compute polynomial expansions for easting (y)
-	E_y := G * sinLat * cosLat * k0 * 0.5
-	I_y := G * sinLat * cosLat3 * k0 * (5 - tanLat*tanLat + 9*w + 4*w*w) / 24
-	J_y := G * sinLat * cosLat5 * k0 * (61 - 58*tanLat*tanLat + (tanLat*tanLat)*(tanLat*tanLat) +
-		270*w - 330*tanLat*tanLat*w + 445*w*w + 324*w*w*w - 680*tanLat*tanLat*w*w + 88*w*w*w*w -
-		600*tanLat*tanLat*w*w*w - 192*tanLat*tanLat*w*w*w*w) / 720
-	H_y := G * sinLat * cosLat7 * k0 * (1385 - 3111*tanLat*tanLat + (tanLat*tanLat)*(tanLat*tanLat)*543 -
-		(tanLat*tanLat)*(tanLat*tanLat)*(tanLat*tanLat)*tanLat) / 40320
-
-	o += D*D*E_y + D*D*D*I_y + D*D*D*D*D*J_y + D*D*D*D*D*D*D*H_y
-	y := o - z + dx
-
-	// Compute polynomial expansions for northing (x)
-	o_x := G * cosLat * k0
-	z_x := G * cosLat3 * k0 * (1 - tanLat*tanLat + w) / 6
-	w_x := G * cosLat5 * k0 * (5 - 18*tanLat*tanLat + (tanLat*tanLat)*(tanLat*tanLat) +
-		14*w - 58*tanLat*tanLat*w + 13*w*w + 4*w*w*w -
-		64*tanLat*tanLat*w*w - 25*tanLat*tanLat*w*w*w) / 120
-	u_x := G * cosLat7 * k0 * (61 - 479*tanLat*tanLat + (tanLat*tanLat)*(tanLat*tanLat)*179 -
-		(tanLat*tanLat)*(tanLat*tanLat)*(tanLat*tanLat)*tanLat) / 5040
-
-	x := dy + D*o_x + D*D*D*z_x + D*D*D*D*D*w_x + D*D*D*D*D*D*D*u_x
-
-	return x, y
+	e, n := tmForward(lat*radiansPerDegree, long*radiansPerDegree)
+	return WCONGNAMULCoord{
+		X: math.Round(e * kakaoScale),
+		Y: math.Round(n * kakaoScale),
+	}
 }
 
 // ConvertWCONGToWGS84 translates WCONGNAMUL coordinates to WGS84.
 func ConvertWCONGToWGS84(x, y float64) (float64, float64) {
-	return transformKoreaTMToWGS84(aWGS84, flatteningFactor, dx, dy, k0, lat0, lon0, x/2.5, y/2.5)
+	// Descale
+	e := x / kakaoScale
+	n := y / kakaoScale
+
+	latRad, lonRad := tmInverse(e, n)
+	return latRad * degreesPerRadian, lonRad * degreesPerRadian
 }
 
-// transformKoreaTMToWGS84 transforms coordinates from Korea TM to WGS84.
-func transformKoreaTMToWGS84(d, e, h, f, c, l, m, x, y float64) (float64, float64) {
-	u := e
-	if u > 1 {
-		u = 1 / u
+// Ellipsoid parameters precomputed
+var (
+	n     = fWGS84 / (2.0 - fWGS84)
+	alpha = []float64{
+		1.0 / 2.0 * n,
+		2.0 / 3.0 * n * n,
+		5.0 / 16.0 * n * n * n,
+		41.0 / 180.0 * n * n * n * n,
 	}
-	w := wConst // Conversion factor from degrees to radians
-	o := l * w
-	D := m * w
-	u = 1 / u
-	B := d * (u - 1) / u
-	z := (d*d - B*B) / (d * d)
-	u = (d*d - B*B) / (B * B)
-	B = (d - B) / (d + B)
-
-	G := d * (1 - B + 5*(B*B-B*B*B)/4 + 81*(B*B*B*B-B*B*B*B*B)/64)
-	E := 3 * d * (B - B*B + 7*(B*B*B-B*B*B*B)/8 + 55*B*B*B*B*B/64) / 2
-	I := 15 * d * (B*B - B*B*B + 3*(B*B*B*B-B*B*B*B*B)/4) / 16
-	J := 35 * d * (B*B*B - B*B*B*B + 11*B*B*B*B*B/16) / 48
-	L := 315 * d * (B*B*B*B - B*B*B*B*B) / 512
-
-	o = G*o - E*math.Sin(2*o) + I*math.Sin(4*o) - J*math.Sin(6*o) + L*math.Sin(8*o)
-	o *= c
-	o = y + o - h
-	M := o / c
-	H := d * (1 - z) / math.Pow(math.Sqrt(1-z*math.Pow(math.Sin(0), 2)), 3)
-	o = M / H
-	for i := 0; i < 5; i++ {
-		B = G*o - E*math.Sin(2*o) + I*math.Sin(4*o) - J*math.Sin(6*o) + L*math.Sin(8*o)
-		H = d * (1 - z) / math.Pow(math.Sqrt(1-z*math.Pow(math.Sin(o), 2)), 3)
-		o += (M - B) / H
+	beta = []float64{
+		1.0 / 2.0 * n,
+		2.0 / 3.0 * n * n,
+		37.0 / 96.0 * n * n * n,
+		1.0 / 360.0 * n * n * n * n,
 	}
-	H = d * (1 - z) / math.Pow(math.Sqrt(1-z*math.Pow(math.Sin(o), 2)), 3)
-	G = d / math.Sqrt(1-z*math.Pow(math.Sin(o), 2))
-	B = math.Sin(o)
-	z = math.Cos(o)
-	E = B / z
-	u *= z * z
-	A := x - f
-	B = E / (2 * H * G * math.Pow(c, 2))
-	I = E * (5 + 3*E*E + u - 4*u*u - 9*E*E*u) / (24 * H * G * G * G * math.Pow(c, 4))
-	J = E * (61 + 90*E*E + 46*u + 45*E*E*E*E - 252*E*E*u - 3*u*u + 100*u*u*u - 66*E*E*u*u - 90*E*E*E*E*u + 88*u*u*u*u + 225*E*E*E*E*u*u + 84*E*E*u*u*u - 192*E*E*u*u*u*u) / (720 * H * G * G * G * G * G * math.Pow(c, 6))
-	H = E * (1385 + 3633*E*E + 4095*E*E*E*E + 1575*E*E*E*E*E*E) / (40320 * H * G * G * G * G * G * G * G * math.Pow(c, 8))
-	o = o - math.Pow(A, 2)*B + math.Pow(A, 4)*I - math.Pow(A, 6)*J + math.Pow(A, 8)*H
-	B = 1 / (G * z * c)
-	H = (1 + 2*E*E + u) / (6 * G * G * G * z * z * z * math.Pow(c, 3))
-	u = (5 + 6*u + 28*E*E - 3*u*u + 8*E*E*u + 24*E*E*E*E - 4*u*u*u + 4*E*E*u*u + 24*E*E*u*u*u) / (120 * G * G * G * G * G * z * z * z * z * z * math.Pow(c, 5))
-	z = (61 + 662*E*E + 1320*E*E*E*E + 720*E*E*E*E*E*E) / (5040 * G * G * G * G * G * G * G * z * z * z * z * z * z * z * math.Pow(c, 7))
-	A = A*B - math.Pow(A, 3)*H + math.Pow(A, 5)*u - math.Pow(A, 7)*z
-	D += A
+	A0 = majorAxisWGS84 / (1.0 + n) * (1.0 + n*n/4.0 + n*n*n*n/64.0)
+)
 
-	return o / w, D / w // LATITUDE, LONGITUDE
+// tmForward converts (lat, lon) in radians to TM (E, N)
+// Based on Krüger series expansion (order 4).
+func tmForward(phi, lam float64) (float64, float64) {
+	deltaLambda := lam - centerLon
+
+	// Faster implementation using hyperbolic func approx:
+	sinPhi := math.Sin(phi)
+	cosPhi := math.Cos(phi)
+
+	// Redfearn Implementation:
+	// Constants for this phi:
+	eSq := fWGS84 * (2 - fWGS84)
+	nu := majorAxisWGS84 / math.Sqrt(1-eSq*sinPhi*sinPhi)
+	rho := majorAxisWGS84 * (1 - eSq) / math.Pow(1-eSq*sinPhi*sinPhi, 1.5)
+	eta2 := nu/rho - 1
+
+	p := deltaLambda
+	cos3Phi := cosPhi * cosPhi * cosPhi
+	cos5Phi := cos3Phi * cosPhi * cosPhi
+	tanPhi := math.Tan(phi)
+	tan2Phi := tanPhi * tanPhi
+	tan4Phi := tan2Phi * tan2Phi
+
+	// Meridian Arc Length M (S in some texts)
+	M := meridianArc(phi)
+
+	// Easting
+	// x = k0 * nu * [ p*cosPhi + (p^3/6)*cos^3Phi*(1 - t^2 + eta^2) + (p^5/120)*cos^5Phi*(5 - 18t^2 + t^4 + 14eta^2 - 58t^2eta^2) ]
+	term1 := p * cosPhi
+	term2 := math.Pow(p, 3) * cos3Phi * (1 - tan2Phi + eta2) / 6.0
+	term3 := math.Pow(p, 5) * cos5Phi * (5 - 18*tan2Phi + tan4Phi + 14*eta2 - 58*tan2Phi*eta2) / 120.0
+
+	E := falseEasting + scaleFactor*nu*(term1+term2+term3)
+
+	// Northing
+	// y = k0 * [ M - M0 + nu*tanPhi*( p^2/2 cos^2Phi + p^4/24 cos^4Phi(5 - t^2 + 9eta^2) + ... ) ]
+	// M0 is M at centerLat.
+	M0 := meridianArc(centerLat)
+
+	tn1 := math.Pow(p, 2) * cosPhi * cosPhi / 2.0
+	tn2 := math.Pow(p, 4) * math.Pow(cosPhi, 4) * (5 - tan2Phi + 9*eta2) / 24.0
+	tn3 := math.Pow(p, 6) * math.Pow(cosPhi, 6) * (61 - 58*tan2Phi + tan4Phi) / 720.0
+
+	N := falseNorthing + scaleFactor*((M-M0)+nu*tanPhi*(tn1+tn2+tn3))
+
+	return E, N
+}
+
+func tmInverse(E, N float64) (float64, float64) {
+	eSq := fWGS84 * (2 - fWGS84)
+	e1 := (1 - math.Sqrt(1-eSq)) / (1 + math.Sqrt(1-eSq))
+
+	M0 := meridianArc(centerLat)
+	M := M0 + (N-falseNorthing)/scaleFactor
+
+	// Calculate footprint latitude (mu)
+	mu := M / (majorAxisWGS84 * (1 - eSq/4 - 3*eSq*eSq/64 - 5*math.Pow(eSq, 3)/256))
+
+	// phi1 (Lat of footprint)
+	// 3e1/2 - 27e1^3/32 ...
+	c1 := (3*e1/2 - 27*math.Pow(e1, 3)/32)
+	c2 := (21*e1*e1/16 - 55*math.Pow(e1, 4)/32)
+	c3 := (151 * math.Pow(e1, 3) / 96)
+
+	phi1 := mu + c1*math.Sin(2*mu) + c2*math.Sin(4*mu) + c3*math.Sin(6*mu)
+
+	// Parameters at phi1
+	sinPhi1 := math.Sin(phi1)
+	cosPhi1 := math.Cos(phi1)
+	tanPhi1 := math.Tan(phi1)
+
+	factor := 1 - eSq*sinPhi1*sinPhi1
+	nu1 := majorAxisWGS84 / math.Sqrt(factor)
+	rho1 := majorAxisWGS84 * (1 - eSq) / math.Pow(factor, 1.5)
+	eta1Sq := nu1/rho1 - 1
+
+	D := (E - falseEasting) / (nu1 * scaleFactor)
+
+	// Lat
+	t1 := D * D / 2
+	t2 := math.Pow(D, 4) / 24 * (5 + 3*tanPhi1*tanPhi1 + eta1Sq - 9*tanPhi1*tanPhi1*eta1Sq)
+	t3 := math.Pow(D, 6) / 720 * (61 + 90*tanPhi1*tanPhi1 + 45*math.Pow(tanPhi1, 4))
+
+	lat := phi1 - (nu1*tanPhi1/rho1)*(t1-t2+t3)
+
+	// Lon
+	l1 := D
+	l2 := math.Pow(D, 3) / 6 * (1 + 2*tanPhi1*tanPhi1 + eta1Sq)
+	l3 := math.Pow(D, 5) / 120 * (5 + 28*tanPhi1*tanPhi1 + 24*math.Pow(tanPhi1, 4) + 6*eta1Sq + 8*tanPhi1*tanPhi1*eta1Sq)
+
+	lon := centerLon + (l1-l2+l3)/cosPhi1
+
+	return lat, lon
+}
+
+// meridianArc calculates the arc length of the meridian from equator to phi
+func meridianArc(phi float64) float64 {
+	eSq := fWGS84 * (2 - fWGS84)
+
+	// Coefficients for series
+	// A = 1 + 3/4 e^2 + 45/64 e^4 + 175/256 e^6
+	// B = 3/4 e^2 + 15/16 e^4 + 525/512 e^6
+	// C = 15/64 e^4 + 105/256 e^6
+	// D = 35/512 e^6
+
+	A := 1 - eSq/4 - 3*eSq*eSq/64 - 5*math.Pow(eSq, 3)/256
+	B := 3*eSq/8 + 3*eSq*eSq/32 + 45*math.Pow(eSq, 3)/1024
+	C := 15*eSq*eSq/256 + 45*math.Pow(eSq, 3)/1024
+	D := 35 * math.Pow(eSq, 3) / 3072
+
+	return majorAxisWGS84 * (A*phi - B*math.Sin(2*phi) + C*math.Sin(4*phi) - D*math.Sin(6*phi))
 }
 
 // hasPrefixInRadix checks if any key in the radix tree starts with the term using WalkPrefix

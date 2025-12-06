@@ -1,4 +1,4 @@
-package handler
+package marker
 
 import (
 	"fmt"
@@ -34,7 +34,7 @@ const WEATHER_MINUTES = 15 * time.Minute
 // @Failure 404 {object} map[string]string "No markers found within the specified distance"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /api/v1/markers/close [get]
-func (h *MarkerHandler) HandleFindCloseMarkers(c *fiber.Ctx) error {
+func (h *MarkerStatusHandler) HandleFindCloseMarkers(c *fiber.Ctx) error {
 	var params dto.QueryParams
 	if err := c.QueryParser(&params); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid query parameters"})
@@ -57,38 +57,31 @@ func (h *MarkerHandler) HandleFindCloseMarkers(c *fiber.Ctx) error {
 	page := pagination.Page
 	pageSize := pagination.PageSize
 
-	// Generate a cache key based on the query parameters
 	cacheKey := fmt.Sprintf("close_markers:%f:%f:%d:%d:%d", params.Latitude, params.Longitude, params.Distance, page, pageSize)
 
-	// Attempt to fetch from cache
 	cachedData, err := h.CacheService.GetCloseMarkersCache(cacheKey)
 	if err == nil && len(cachedData) > 0 {
-		// Cache hit, return the cached data
 		c.Append("X-Cache", "hit")
 		return c.Send(cachedData)
 	}
 
-	// Cache miss: Find nearby markers within the specified distance and page
 	markers, total, err := h.MarkerFacadeService.FindClosestNMarkersWithinDistance(params.Latitude, params.Longitude, params.Distance, pageSize, pagination.Offset)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to retrieve markers"})
 	}
 
-	// Calculate total pages
 	totalPages := total / pageSize
 	if total%pageSize != 0 {
 		totalPages++
 	}
 
-	// Adjust the current page if the calculated offset exceeds the number of markers
 	if page > totalPages {
 		page = totalPages
 	}
 	if page < 1 {
-		page = 1 // Ensure page is set to 1 if totalPages calculates to 0 (i.e., no markers found)
+		page = 1
 	}
 
-	// Prepare the response data
 	response := dto.MarkersClose{
 		Markers:      markers,
 		CurrentPage:  page,
@@ -96,16 +89,13 @@ func (h *MarkerHandler) HandleFindCloseMarkers(c *fiber.Ctx) error {
 		TotalMarkers: total,
 	}
 
-	// Marshal the response for caching
 	responseJSON, err := sonic.Marshal(response)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to encode response"})
 	}
 
-	// Cache the response for future use
 	go h.CacheService.SetCloseMarkersCache(cacheKey, responseJSON, 10*time.Minute)
 
-	// Return the response to the client
 	return c.Send(responseJSON)
 }
 
@@ -124,8 +114,8 @@ func (h *MarkerHandler) HandleFindCloseMarkers(c *fiber.Ctx) error {
 // @Failure 400 {object} map[string]string "Invalid query parameters"
 // @Failure 500 {object} map[string]string "Failed to retrieve ranked markers"
 // @Router /api/v1/markers/area-ranking [get]
-func (h *MarkerHandler) HandleGetCurrentAreaMarkerRanking(c *fiber.Ctx) error {
-	limitParam := c.Query("limit", "10") // Default limit
+func (h *MarkerFeedHandler) HandleGetCurrentAreaMarkerRanking(c *fiber.Ctx) error {
+	limitParam := c.Query("limit", "10")
 	lat, lng, err := GetLatLong(c)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
@@ -136,8 +126,7 @@ func (h *MarkerHandler) HandleGetCurrentAreaMarkerRanking(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid limit"})
 	}
 
-	// "current area"
-	const currentAreaDistance = 10000 // Meters
+	const currentAreaDistance = 10000 // meters
 
 	markers, err := h.MarkerFacadeService.FindRankedMarkersInCurrentArea(lat, lng, currentAreaDistance, limit)
 	if err != nil {
@@ -151,7 +140,7 @@ func (h *MarkerHandler) HandleGetCurrentAreaMarkerRanking(c *fiber.Ctx) error {
 	return c.JSON(markers)
 }
 
-func (h *MarkerHandler) HandleGetMarkersClosebyAdmin(c *fiber.Ctx) error {
+func (h *MarkerStatusHandler) HandleGetMarkersClosebyAdmin(c *fiber.Ctx) error {
 	markers, err := h.MarkerFacadeService.CheckNearbyMarkersInDB()
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to retrieve markers: " + err.Error()})
@@ -176,7 +165,7 @@ func (h *MarkerHandler) HandleGetMarkersClosebyAdmin(c *fiber.Ctx) error {
 // @Failure 400 {object} map[string]string "Invalid query parameters"
 // @Failure 409 {object} map[string]string "Failed to fetch weather data"
 // @Router /api/v1/markers/weather [get]
-func (h *MarkerHandler) HandleGetWeatherByWGS84(c *fiber.Ctx) error {
+func (h *MarkerStatusHandler) HandleGetWeatherByWGS84(c *fiber.Ctx) error {
 	// Check the Referer header and redirect if it matches the specific URL pattern
 	// if !strings.HasSuffix(c.Get("Referer"), ".k-pullup.com") || c.Get("Referer") != "https://www.k-pullup.com/" {
 	// 	return c.Redirect("https://k-pullup.com", fiber.StatusFound) // Use HTTP 302 for standard redirection
@@ -187,11 +176,9 @@ func (h *MarkerHandler) HandleGetWeatherByWGS84(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "failed to get latitude and longitude"})
 	}
 
-	// Generate a short cache key by hashing the lat/long combination
 	weather, cacheErr := h.CacheService.GetWcongCache(lat, lng)
 	if cacheErr == nil && weather != nil {
 		c.Append("X-Cache", "hit")
-		// Cache hit, return cached weather (10mins)
 		return c.JSON(weather)
 	}
 
@@ -200,7 +187,6 @@ func (h *MarkerHandler) HandleGetWeatherByWGS84(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "failed to fetch weather from address"})
 	}
 
-	// Cache the result for future requests
 	go h.CacheService.SetWcongCache(lat, lng, result)
 
 	return c.JSON(result)
@@ -220,7 +206,7 @@ func (h *MarkerHandler) HandleGetWeatherByWGS84(c *fiber.Ctx) error {
 // @Success 200 {object} util.WCONGNAMULCoord "Converted coordinates in WCONGNAMUL format"
 // @Failure 400 {object} map[string]string "Invalid query parameters"
 // @Router /api/v1/markers/convert [get]
-func (h *MarkerHandler) HandleConvertWGS84ToWCONGNAMUL(c *fiber.Ctx) error {
+func (h *MarkerStatusHandler) HandleConvertWGS84ToWCONGNAMUL(c *fiber.Ctx) error {
 	lat, lng, err := GetLatLong(c)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
@@ -231,7 +217,7 @@ func (h *MarkerHandler) HandleConvertWGS84ToWCONGNAMUL(c *fiber.Ctx) error {
 	return c.JSON(result)
 }
 
-func (h *MarkerHandler) HandleIsInSouthKorea(c *fiber.Ctx) error {
+func (h *MarkerStatusHandler) HandleIsInSouthKorea(c *fiber.Ctx) error {
 	lat, lng, err := GetLatLong(c)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
@@ -242,22 +228,80 @@ func (h *MarkerHandler) HandleIsInSouthKorea(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"result": result})
 }
 
-// DEPRECATED: Use version 2
-func (h *MarkerHandler) HandleSaveOfflineMap(c *fiber.Ctx) error {
+// HandleSaveOfflineMap2 generates and downloads an offline map as a PDF.
+//
+// @Summary Save offline map
+// @Description Generates an offline map for the specified location and provides a downloadable PDF.
+// @Description Rate limit: Maximum 5 requests per minute per IP.
+// @ID save-offline-map
+// @Tags markers-data
+// @Accept json
+// @Produce application/pdf
+// @Security
+// @Param latitude query number true "Latitude in WGS84 format"
+// @Param longitude query number true "Longitude in WGS84 format"
+// @Success 200 {file} application/pdf "Generated PDF map"
+// @Failure 204 {object} map[string]string "No content available for this location"
+// @Failure 400 {object} map[string]string "Invalid query parameters"
+// @Failure 429 {string} string "Too many requests, please try again later"
+// @Failure 500 {object} map[string]string "Failed to create a PDF"
+// @Router /api/v1/markers/save-offline [get]
+func (h *MarkerStatusHandler) HandleSaveOfflineMap2(c *fiber.Ctx) error {
 	lat, lng, err := GetLatLong(c)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	pdf, err := h.MarkerFacadeService.SaveOfflineMap(lat, lng)
+	pdf, _, err := h.MarkerFacadeService.SaveOfflineMap2(lat, lng)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create a PDF: " + err.Error()})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create a PDF"})
+	}
+	if pdf == "" {
+		return c.Status(fiber.StatusNoContent).JSON(fiber.Map{"error": "no content for this location"})
 	}
 
+	// Use Fiber's SendFile method
+	// err = c.SendFile(pdf, true) // 'true' to enable compression
+	// if err != nil {
+	// 	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to send file"})
+	// }
+	// return nil
 	return c.Download(pdf)
 }
 
-func (h *MarkerHandler) HandleTestDynamic(c *fiber.Ctx) error {
+// HandleVerifyMarker verifies if a marker location is valid.
+//
+// @Summary Verify marker location
+// @Description Checks if a marker at the given latitude and longitude is valid.
+// @ID verify-marker
+// @Tags markers-util
+// @Accept json
+// @Produce json
+// @Security
+// @Param latitude query number true "Latitude in WGS84 format"
+// @Param longitude query number true "Longitude in WGS84 format"
+// @Success 200 {string} string "OK"
+// @Failure 400 {object} map[string]string "Invalid query parameters or comment contains inappropriate content"
+// @Failure 403 {object} map[string]string "Operation is only allowed within South Korea"
+// @Failure 409 {object} map[string]string "There is a marker already nearby"
+// @Failure 422 {object} map[string]string "Marker is in a restricted area"
+// @Failure 500 {object} map[string]string "Internal server error during verification"
+// @Router /api/v1/markers/verify [get]
+func (h *MarkerStatusHandler) HandleVerifyMarker(c *fiber.Ctx) error {
+	lat, lng, err := GetLatLong(c)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	merr := h.MarkerFacadeService.CheckMarkerValidity(lat, lng, "")
+	if merr != nil {
+		return c.Status(merr.Code).JSON(fiber.Map{"error": merr.Error()})
+	}
+
+	return c.Status(fiber.StatusOK).SendString("OK")
+}
+
+func (h *MarkerStatusHandler) HandleTestDynamic(c *fiber.Ctx) error {
 	lat, lng, err := GetLatLong(c)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
@@ -283,43 +327,30 @@ func (h *MarkerHandler) HandleTestDynamic(c *fiber.Ctx) error {
 	return c.SendString("Dynamic API test")
 }
 
-// HandleSaveOfflineMap2 generates and downloads an offline map as a PDF.
+// HandleGetRoadViewPicDate retrieves the date of the latest 카카오 road view picture for a given location.
 //
-// @Summary Save offline map
-// @Description Generates an offline map for the specified location and provides a downloadable PDF.
-// @Description Rate limit: Maximum 5 requests per minute per IP.
-// @ID save-offline-map
-// @Tags markers-data
+// @Summary Get 카카오 road view picture date
+// @Description Fetches the most recent 카카오 road view picture date for the given latitude and longitude.
+// @ID get-roadview-pic-date
+// @Tags markers-util
 // @Accept json
-// @Produce application/pdf
-// @Security
+// @Produce json
 // @Param latitude query number true "Latitude in WGS84 format"
 // @Param longitude query number true "Longitude in WGS84 format"
-// @Success 200 {file} application/pdf "Generated PDF map"
-// @Failure 204 {object} map[string]string "No content available for this location"
+// @Success 200 {object} map[string]string "Date of the most recent road view picture" example: {"shot_date": "2023-05-10T14:00:00Z"}
 // @Failure 400 {object} map[string]string "Invalid query parameters"
-// @Failure 429 {string} string "Too many requests, please try again later"
-// @Failure 500 {object} map[string]string "Failed to create a PDF"
-// @Router /api/v1/markers/save-offline [get]
-func (h *MarkerHandler) HandleSaveOfflineMap2(c *fiber.Ctx) error {
+// @Failure 500 {object} map[string]string "Failed to fetch road view date"
+// @Router /api/v1/markers/roadview-date [get]
+func (h *MarkerStatusHandler) HandleGetRoadViewPicDate(c *fiber.Ctx) error {
 	lat, lng, err := GetLatLong(c)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	pdf, _, err := h.MarkerFacadeService.SaveOfflineMap2(lat, lng)
+	date, err := h.MarkerFacadeService.FacilityService.FetchRoadViewPicDate(lat, lng)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create a PDF"})
-	}
-	if pdf == "" {
-		return c.Status(fiber.StatusNoContent).JSON(fiber.Map{"error": "no content for this location"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch road view date"})
 	}
 
-	// Use Fiber's SendFile method
-	// err = c.SendFile(pdf, true) // 'true' to enable compression
-	// if err != nil {
-	// 	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to send file"})
-	// }
-	// return nil
-	return c.Download(pdf) // sendfile systemcall
+	return c.JSON(fiber.Map{"shot_date": date.Format(time.RFC3339)})
 }

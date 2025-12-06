@@ -1,11 +1,13 @@
 package service
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/Alfex4936/chulbong-kr/dto"
+	"github.com/Alfex4936/chulbong-kr/model"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -21,11 +23,24 @@ const (
 	deleteFavQuery        = "DELETE FROM Favorites WHERE UserID = ? AND MarkerID = ?"
 
 	getMarkersAfterIDQuery = "SELECT ST_X(Location) AS Latitude, ST_Y(Location) AS Longitude, Address, MarkerID, COALESCE(U.Username, '알 수 없는 사용자') AS Username, M.UserID FROM Markers M LEFT JOIN Users U ON M.UserID = U.UserID WHERE MarkerID > ? ORDER BY MarkerID ASC"
+
+	insertMarkerReactionQuery  = "INSERT INTO MarkerReactions (MarkerID, UserID, ReactionType) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE ReactionType = VALUES(ReactionType), UpdatedAt = CURRENT_TIMESTAMP"
+	deleteMarkerReactionQuery  = "DELETE FROM MarkerReactions WHERE MarkerID = ? AND UserID = ?"
+	getMarkerReactionCounts    = "SELECT ReactionType, COUNT(*) AS Count FROM MarkerReactions WHERE MarkerID = ? GROUP BY ReactionType"
+	getUserMarkerReactionQuery = "SELECT ReactionType FROM MarkerReactions WHERE MarkerID = ? AND UserID = ? LIMIT 1"
 )
 
 type MarkerInteractService struct {
 	DB           *sqlx.DB
 	CacheService *MarkerCacheService
+}
+
+var allowedMarkerReactions = map[string]struct{}{
+	"clean":   {},
+	"crowded": {},
+	"broken":  {},
+	"busy":    {},
+	"calm":    {},
 }
 
 func NewMarkerInteractService(db *sqlx.DB, cache *MarkerCacheService) *MarkerInteractService {
@@ -79,6 +94,79 @@ func (s *MarkerInteractService) CheckUserFavorite(userID, markerID int) (bool, e
 	var exists bool
 	err := s.DB.Get(&exists, checkFavQuery, userID, markerID)
 	return exists, err
+}
+
+// SetMarkerReaction upserts a reaction for a marker from a user.
+func (s *MarkerInteractService) SetMarkerReaction(userID, markerID int, reaction string) error {
+	if _, ok := allowedMarkerReactions[reaction]; !ok {
+		return fmt.Errorf("invalid reaction type")
+	}
+
+	_, err := s.DB.Exec(insertMarkerReactionQuery, markerID, userID, reaction)
+	if err != nil {
+		return fmt.Errorf("upserting marker reaction: %w", err)
+	}
+	return nil
+}
+
+// RemoveMarkerReaction deletes a user's reaction for a marker.
+func (s *MarkerInteractService) RemoveMarkerReaction(userID, markerID int) error {
+	_, err := s.DB.Exec(deleteMarkerReactionQuery, markerID, userID)
+	if err != nil {
+		return fmt.Errorf("deleting marker reaction: %w", err)
+	}
+	return nil
+}
+
+// GetMarkerReactionSummary returns aggregated counts plus the current user's reaction (if provided).
+func (s *MarkerInteractService) GetMarkerReactionSummary(markerID int, userID *int) (model.MarkerReactionSummary, error) {
+	summary := model.MarkerReactionSummary{
+		Counts: model.MarkerReactionCounts{},
+	}
+
+	type reactionRow struct {
+		ReactionType string `db:"ReactionType"`
+		Count        int    `db:"Count"`
+	}
+
+	rows, err := s.DB.Queryx(getMarkerReactionCounts, markerID)
+	if err != nil {
+		return summary, fmt.Errorf("querying reaction counts: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var row reactionRow
+		if scanErr := rows.StructScan(&row); scanErr != nil {
+			return summary, fmt.Errorf("scanning reaction count: %w", scanErr)
+		}
+
+		switch row.ReactionType {
+		case "clean":
+			summary.Counts.Clean = row.Count
+		case "crowded":
+			summary.Counts.Crowded = row.Count
+		case "broken":
+			summary.Counts.Broken = row.Count
+		case "busy":
+			summary.Counts.Busy = row.Count
+		case "calm":
+			summary.Counts.Calm = row.Count
+		}
+	}
+
+	if userID != nil {
+		var reaction string
+		err = s.DB.Get(&reaction, getUserMarkerReactionQuery, markerID, *userID)
+		if err != nil && err != sql.ErrNoRows {
+			return summary, fmt.Errorf("querying user reaction: %w", err)
+		}
+		if err == nil {
+			summary.MyReaction = reaction
+		}
+	}
+
+	return summary, nil
 }
 
 // AddFavoriteHandler adds a new favorite marker for the user.

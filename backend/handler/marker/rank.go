@@ -1,4 +1,4 @@
-package handler
+package marker
 
 import (
 	"github.com/gofiber/fiber/v2"
@@ -16,13 +16,12 @@ import (
 // @Success 200 {array} dto.MarkerSimpleWithAddr "List of top-ranked markers"
 // @Failure 500 {object} map[string]string "Failed to retrieve marker ranking"
 // @Router /api/v1/markers/ranking [get]
-func (h *MarkerHandler) HandleGetMarkerRanking(c *fiber.Ctx) error {
+func (h *MarkerFeedHandler) HandleGetMarkerRanking(c *fiber.Ctx) error {
 	ranking := h.MarkerFacadeService.GetTopMarkers(50)
-
 	return c.JSON(ranking)
 }
 
-func (h *MarkerHandler) HandleGetUniqueVisitorCount(c *fiber.Ctx) error {
+func (h *MarkerFeedHandler) HandleGetUniqueVisitorCount(c *fiber.Ctx) error {
 	markerID := c.Query("markerId")
 	if markerID == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid Marker ID"})
@@ -33,7 +32,7 @@ func (h *MarkerHandler) HandleGetUniqueVisitorCount(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"markerId": markerID, "visitors": count})
 }
 
-func (h *MarkerHandler) HandleGetAllUniqueVisitorCount(c *fiber.Ctx) error {
+func (h *MarkerFeedHandler) HandleGetAllUniqueVisitorCount(c *fiber.Ctx) error {
 	count := h.MarkerFacadeService.GetAllUniqueVisitorCounts()
 	return c.JSON(count)
 }

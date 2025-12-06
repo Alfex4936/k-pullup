@@ -117,6 +117,28 @@ func (c *ChatUtil) GenerateKoreanNickname() string {
 	return builder.String()
 }
 
+// GenerateUsernameForAuth generates a simpler username format for OAuth authentication
+// Format: "귀여운-무지-12145" (no spaces or brackets for database compatibility)
+func (c *ChatUtil) GenerateUsernameForAuth() string {
+	adjective := adjectives[rand.IntN(len(adjectives))]
+	name := names[rand.IntN(len(names))]
+	randomValue := rand.Uint32()
+
+	// Convert to a smaller number for shorter usernames
+	shortUID := strconv.FormatUint(uint64(randomValue%100000), 10)
+
+	var builder strings.Builder
+	builder.Grow(len(adjective) + len(name) + len(shortUID) + 2)
+
+	builder.WriteString(adjective)
+	builder.WriteString("-")
+	builder.WriteString(name)
+	builder.WriteString("-")
+	builder.WriteString(shortUID)
+
+	return builder.String()
+}
+
 func (cu *ChatUtil) GetUserIP(c *fiber.Ctx) string {
 	if c == nil {
 		return ""

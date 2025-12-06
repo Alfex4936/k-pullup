@@ -26,12 +26,15 @@ import (
 	"go.uber.org/zap"
 
 	gocache "github.com/eko/gocache/lib/v4/cache"
+	"github.com/eko/gocache/lib/v4/store"
 	ristretto_store "github.com/eko/gocache/store/ristretto/v4"
+	"golang.org/x/sync/singleflight"
 )
 
 const (
 	Analyzer     = "koCJKEdgeNgram"
 	nearDistance = "2km"
+	searchCacheTTL = 5 * time.Minute
 )
 
 var (
@@ -122,6 +125,8 @@ type BleveSearchService struct {
 	GetAllMarkersStmt *sqlx.Stmt
 
 	searchCache *gocache.Cache[dto.MarkerSearchResponse]
+	searchSF    singleflight.Group
+	searchVersion uint64
 
 	stationMap map[string]dto.KoreaStation
 
@@ -146,6 +151,7 @@ func NewBleveSearchService(
 		searchCache: searchCache, Logger: logger, DB: db,
 		GetAllMarkersStmt: getMarkerStmt, stationMap: stationMap,
 		batchPool: make([]*bleve.Batch, len(shards)),
+		searchVersion: 1,
 	}
 }
 
@@ -163,106 +169,135 @@ func RegisteBleveLifecycle(lifecycle fx.Lifecycle, service *BleveSearchService) 
 
 // SearchMarkerAddress calls bleve (Lucene-like) search
 func (s *BleveSearchService) SearchMarkerAddress(t string) (dto.MarkerSearchResponse, error) {
-	// t is already trimmed
-	cacheKey := fmt.Sprintf("search:%s", t)
-	cachedResponse, err := s.searchCache.Get(context.Background(), cacheKey)
-	if err == nil {
-		return cachedResponse, nil
-	}
-
-	// 쿼티 한글? -> 한글로 변환 (ex. "rudrleh" -> "경기도")
-	if dkssud.IsQwertyHangul(t) {
-		t = dkssud.QwertyToHangul(t)
-	}
-
-	// s.Logger.Info("Searching...", zap.String("query", t))
-
+	ctx := context.Background()
+	queryText := normalizeSearchQuery(t)
 	response := dto.MarkerSearchResponse{Markers: make([]dto.ZincMarker, 0)}
-
-	// Get a pointer to a slice from the pool
-	termsPtr := termsPool.Get().(*[]string)
-	terms := (*termsPtr)[:0] // Reset the slice
-
-	// Split the search term by spaces and append to the pooled slice
-	terms = append(terms, strings.Fields(t)...)
-	if len(terms) == 0 {
-		termsPool.Put(termsPtr)
+	if queryText == "" {
 		return response, nil
 	}
 
-	terms[0] = standardizeInitials(terms[0])
+	version := s.cacheVersion()
+	cacheKey := s.searchCacheKey(version, queryText)
 
-	// Channels to receive search results and the time taken
-	resultsChan := make(chan *bleve_search.DocumentMatch, 100)
-	tookTimesChan := make(chan time.Duration, 1)
+	if cachedResponse, err := s.searchCache.Get(ctx, cacheKey); err == nil {
+		return cachedResponse, nil
+	}
 
-	// Launch a single goroutine to perform the search
-	go func() {
-		performWholeQuerySearch(s.Index, t, terms, resultsChan, tookTimesChan, s.stationMap)
-		close(resultsChan)
-		close(tookTimesChan)
-	}()
+	resultAny, err, _ := s.searchSF.Do(cacheKey, func() (interface{}, error) {
+		if cachedResponse, err := s.searchCache.Get(ctx, cacheKey); err == nil {
+			return cachedResponse, nil
+		}
 
-	// Get a pointer to a slice from the pool
-	allResultsPtr := documentMatchPool.Get().(*[]*bleve_search.DocumentMatch)
-	allResults := (*allResultsPtr)[:0] // Reset the slice
-	var totalTook time.Duration
+		localResp := dto.MarkerSearchResponse{Markers: make([]dto.ZincMarker, 0)}
 
-	for {
-		select {
-		case result, ok := <-resultsChan:
-			if !ok {
-				resultsChan = nil
-			} else if result != nil {
-				allResults = append(allResults, result)
+		termsPtr := termsPool.Get().(*[]string)
+		terms := (*termsPtr)[:0]
+		terms = append(terms, strings.Fields(queryText)...)
+		if len(terms) == 0 {
+			termsPool.Put(termsPtr)
+			return localResp, nil
+		}
+
+		terms[0] = standardizeInitials(terms[0])
+
+		resultsChan := make(chan *bleve_search.DocumentMatch, 100)
+		tookTimesChan := make(chan time.Duration, 1)
+
+		go func() {
+			performWholeQuerySearch(s.Index, queryText, terms, resultsChan, tookTimesChan, s.stationMap)
+			close(resultsChan)
+			close(tookTimesChan)
+		}()
+
+		allResultsPtr := documentMatchPool.Get().(*[]*bleve_search.DocumentMatch)
+		allResults := (*allResultsPtr)[:0]
+		var totalTook time.Duration
+
+		for {
+			select {
+			case result, ok := <-resultsChan:
+				if !ok {
+					resultsChan = nil
+				} else if result != nil {
+					allResults = append(allResults, result)
+				}
+			case took, ok := <-tookTimesChan:
+				if !ok {
+					tookTimesChan = nil
+				} else {
+					totalTook += took
+				}
 			}
-		case took, ok := <-tookTimesChan:
-			if !ok {
-				tookTimesChan = nil
-			} else {
-				totalTook += took
+
+			if resultsChan == nil && tookTimesChan == nil {
+				break
 			}
 		}
 
-		if resultsChan == nil && tookTimesChan == nil {
-			break
+		allResults = removeDuplicatesAndKeepHighestScore(allResults)
+
+		if len(allResults) == 0 {
+			fuzzyResults, fuzzyTook := performFuzzySearch(s.Index, terms)
+			allResults = fuzzyResults
+			totalTook += fuzzyTook
 		}
+
+		if _, isStationSearch := s.stationMap[queryText]; !isStationSearch {
+			adjustScoresBySimilarity(allResults, queryText)
+			sortResultsByScore(allResults)
+		}
+
+		localResp.Took = int(totalTook.Milliseconds())
+		localResp.Markers = extractMarkers(allResults)
+
+		_ = s.searchCache.Set(ctx, cacheKey, localResp, store.WithExpiration(searchCacheTTL))
+
+		*allResultsPtr = allResults[:0]
+		documentMatchPool.Put(allResultsPtr)
+
+		*termsPtr = terms[:0]
+		termsPool.Put(termsPtr)
+
+		return localResp, nil
+	})
+	if err != nil {
+		return response, err
 	}
 
-	// Sort and ensure diverse results
-	// diverseResults := ensureDiversity(allResults, 10)
+	return resultAny.(dto.MarkerSearchResponse), nil
+}
 
-	// Remove duplicates by keeping only the highest scoring result per document ID
-	allResults = removeDuplicatesAndKeepHighestScore(allResults)
-
-	if len(allResults) == 0 { // or if len <= 3?
-		// If no results, try fuzzy search with controlled fuzziness
-		fuzzyResults, fuzzyTook := performFuzzySearch(s.Index, terms)
-		allResults = fuzzyResults
-		totalTook += fuzzyTook
+func normalizeSearchQuery(t string) string {
+	trimmed := strings.TrimSpace(t)
+	if trimmed == "" {
+		return ""
 	}
 
-	// If this is not a station search, adjust scores based on similarity and re-sort.
-	if _, isStationSearch := s.stationMap[t]; !isStationSearch {
-		adjustScoresBySimilarity(allResults, t)
-		sortResultsByScore(allResults)
+	if dkssud.IsQwertyHangul(trimmed) {
+		trimmed = dkssud.QwertyToHangul(trimmed)
 	}
 
-	response.Took = int(totalTook.Milliseconds())
-	response.Markers = extractMarkers(allResults)
+	parts := strings.Fields(trimmed)
+	if len(parts) == 0 {
+		return ""
+	}
 
-	// Cache the response
-	s.searchCache.Set(context.Background(), cacheKey, response)
+	return strings.Join(parts, " ")
+}
 
-	// Reset the slice and return the pointer to the pool
-	*allResultsPtr = allResults[:0]
-	documentMatchPool.Put(allResultsPtr)
+func (s *BleveSearchService) searchCacheKey(version uint64, term string) string {
+	return fmt.Sprintf("search:v%d:%s", version, term)
+}
 
-	// Return terms slice to the pool
-	*termsPtr = terms[:0]
-	termsPool.Put(termsPtr)
-
-	return response, nil
+func (s *BleveSearchService) cacheVersion() uint64 {
+	ver := atomic.LoadUint64(&s.searchVersion)
+	if ver == 0 {
+		if atomic.CompareAndSwapUint64(&s.searchVersion, 0, 1) {
+			return 1
+		}
+		return atomic.LoadUint64(&s.searchVersion)
+	}
+	return ver
 }
 
 // TODO: use DAWG
@@ -354,6 +389,7 @@ func (s *BleveSearchService) DeleteMarkerIndex(markerId int) error {
 }
 
 func (s *BleveSearchService) InvalidateCache() {
+	atomic.AddUint64(&s.searchVersion, 1)
 	s.searchCache.Clear(context.Background())
 }
 

@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/slack-go/slack"
@@ -26,6 +27,12 @@ var (
 )
 
 func SendSlackNotification(duration time.Duration, statusCode int, clientIP, method, path, userAgent, queryParams, referer string) {
+	// Skip notifications for common web crawlers that may have slower response times
+	if strings.Contains(userAgent, "Yeti/") || strings.Contains(userAgent, "+https://naver.me/spd") ||
+		strings.Contains(userAgent, "Googlebot") || strings.Contains(userAgent, "+http://www.google.com/bot.html") {
+		return
+	}
+
 	currentTime := time.Now().Format(TIME_FORMAT_STR)
 
 	// Header section with bold text and warning emoji

@@ -303,9 +303,9 @@ func (s *MarkerManageService) SetCache(mjson []byte) {
 }
 
 func (s *MarkerManageService) ClearCache() {
-	s.RedisService.ResetCache(s.RedisService.RedisConfig.AllMarkersKey)
-	// ctx := context.Background()
-	// s.byteCache.Delete(ctx, "allMarkers")
+	if err := s.CacheService.InvalidateFullMarkersCache(); err != nil {
+		s.Logger.Warn("Failed to invalidate marker cache", zap.Error(err))
+	}
 }
 
 // GetUserMarkerCreationStatus returns the current and remaining marker creation count for a user today
@@ -1020,6 +1020,64 @@ func (s *MarkerManageService) UploadMarkerPhotoToS3(markerID int, files []*multi
 	}
 
 	return picUrls, nil
+}
+
+// DeleteMarkerPhotoByID deletes a single photo (and its thumbnail via S3Service) for a marker.
+// Authorization: marker owner or admin.
+func (s *MarkerManageService) DeleteMarkerPhotoByID(userID int, userRole string, markerID, photoID int) error {
+	// Check ownership first (same query used in DeleteMarker)
+	var ownerID sql.NullInt64
+	if err := s.DB.Get(&ownerID, getAllMarkersByUserQuery, markerID); err != nil {
+		return fmt.Errorf("checking marker ownership: %w", err)
+	}
+	if userRole != "admin" && int(ownerID.Int64) != userID {
+		return fmt.Errorf("user %d is not authorized to delete a photo of marker %d", userID, markerID)
+	}
+
+	// Option A: perform DB delete first (transaction), then delete from S3.
+	// This avoids leaving a DB record pointing to a missing S3 object if DB work fails.
+
+	tx, err := s.DB.Beginx()
+	if err != nil {
+		return fmt.Errorf("starting transaction: %w", err)
+	}
+	// We will manually rollback on error paths before commit.
+
+	var photoURL string
+	query := "SELECT PhotoURL FROM Photos WHERE PhotoID = ? AND MarkerID = ? LIMIT 1"
+	if err = tx.QueryRow(query, photoID, markerID).Scan(&photoURL); err != nil {
+		if err == sql.ErrNoRows {
+			tx.Rollback()
+			return fmt.Errorf("no photo found for marker %d with photoID %d", markerID, photoID)
+		}
+		tx.Rollback()
+		return fmt.Errorf("querying photo: %w", err)
+	}
+
+	// Delete DB record first
+	if _, err = tx.Exec("DELETE FROM Photos WHERE PhotoID = ? AND MarkerID = ?", photoID, markerID); err != nil {
+		tx.Rollback()
+		return fmt.Errorf("deleting photo record: %w", err)
+	}
+
+	// Optionally bump marker updated time (non-critical). Failure logged only.
+	if _, updErr := tx.Exec(updateTimeMarkerQuery, markerID); updErr != nil {
+		s.Logger.Warn("failed to update marker updatedAt after photo delete", zap.Error(updErr), zap.Int("markerID", markerID))
+	}
+
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("committing transaction: %w", err)
+	}
+
+	// Now attempt S3 deletion. If this fails, log warning (will leave an unreferenced object which can be GC'd later).
+	if err = s.S3Service.DeleteDataFromS3(photoURL); err != nil {
+		s.Logger.Warn("failed deleting photo from S3 after DB commit", zap.Error(err), zap.String("photoURL", photoURL), zap.Int("markerID", markerID), zap.Int("photoID", photoID))
+		// Do not return error to keep operation idempotent for client
+	}
+
+	// Invalidate caches after successful DB change
+	s.ClearCache()
+	return nil
 }
 
 func (s *MarkerManageService) CheckNearbyMarkersInDB() ([]dto.MarkerGroup, error) {

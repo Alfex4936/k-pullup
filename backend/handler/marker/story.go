@@ -1,4 +1,4 @@
-package handler
+package marker
 
 import (
 	"errors"
@@ -29,7 +29,7 @@ import (
 // @Failure 409 {object} map[string]string "Story already posted"
 // @Failure 500 {object} map[string]string "Failed to add story"
 // @Router /api/v1/markers/{markerID}/stories [post]
-func (h *MarkerHandler) HandleAddStory(c *fiber.Ctx) error {
+func (h *MarkerStoryHandler) HandleAddStory(c *fiber.Ctx) error {
 	markerIDParam := c.Params("markerID")
 	markerID, err := strconv.Atoi(markerIDParam)
 	if err != nil {
@@ -38,7 +38,6 @@ func (h *MarkerHandler) HandleAddStory(c *fiber.Ctx) error {
 
 	userID := c.Locals("userID").(int)
 
-	// Parse the multipart form data
 	form, err := c.MultipartForm()
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Failed to parse form"})
@@ -94,7 +93,7 @@ func (h *MarkerHandler) HandleAddStory(c *fiber.Ctx) error {
 // @Failure 400 {object} map[string]string "Invalid marker ID or pagination parameters"
 // @Failure 500 {object} map[string]string "Failed to get stories"
 // @Router /api/v1/markers/{markerID}/stories [get]
-func (h *MarkerHandler) HandleGetStories(c *fiber.Ctx) error {
+func (h *MarkerStoryHandler) HandleGetStories(c *fiber.Ctx) error {
 	markerIDParam := c.Params("markerID")
 	markerID, err := strconv.Atoi(markerIDParam)
 	if err != nil {
@@ -113,7 +112,6 @@ func (h *MarkerHandler) HandleGetStories(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid pagination parameters"})
 	}
 
-	// Call the service to get stories
 	stories, err := h.MarkerFacadeService.StoryService.GetStories(userID, markerID, pagination.Offset, pagination.PageSize)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to get stories"})
@@ -137,7 +135,7 @@ func (h *MarkerHandler) HandleGetStories(c *fiber.Ctx) error {
 // @Failure 400 {object} map[string]string "Invalid pagination parameters"
 // @Failure 500 {object} map[string]string "Failed to get stories"
 // @Router /api/v1/markers/stories [get]
-func (h *MarkerHandler) HandleGetAllStories(c *fiber.Ctx) error {
+func (h *MarkerStoryHandler) HandleGetAllStories(c *fiber.Ctx) error {
 	pagination, err := util.ParsePaginationParams(c, &util.PaginationConfig{
 		DefaultPage:       1,
 		DefaultPageSize:   10,
@@ -148,7 +146,6 @@ func (h *MarkerHandler) HandleGetAllStories(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid pagination parameters"})
 	}
 
-	// Call the service to get all stories
 	stories, err := h.MarkerFacadeService.StoryService.GetAllStories(pagination.Page, pagination.PageSize)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to get stories"})
@@ -174,7 +171,7 @@ func (h *MarkerHandler) HandleGetAllStories(c *fiber.Ctx) error {
 // @Failure 404 {object} map[string]string "Story not found"
 // @Failure 500 {object} map[string]string "Failed to delete story"
 // @Router /api/v1/markers/{markerID}/stories/{storyID} [delete]
-func (h *MarkerHandler) HandleDeleteStory(c *fiber.Ctx) error {
+func (h *MarkerStoryHandler) HandleDeleteStory(c *fiber.Ctx) error {
 	markerIDParam := c.Params("markerID")
 	storyIDParam := c.Params("storyID")
 
@@ -190,15 +187,15 @@ func (h *MarkerHandler) HandleDeleteStory(c *fiber.Ctx) error {
 	userRole := c.Locals("role").(string)
 	userID := c.Locals("userID").(int)
 
-	// Call the service to delete the story
-	err = h.MarkerFacadeService.StoryService.DeleteStory(markerID, storyID, userID, userRole)
-	if err != nil {
-		if err == service.ErrUnauthorized {
+	if err := h.MarkerFacadeService.StoryService.DeleteStory(markerID, storyID, userID, userRole); err != nil {
+		switch err {
+		case service.ErrUnauthorized:
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "You are not authorized to delete this story"})
-		} else if err == service.ErrStoryNotFound {
+		case service.ErrStoryNotFound:
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Story not found"})
+		default:
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to delete story"})
 		}
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to delete story"})
 	}
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Story deleted"})
@@ -219,7 +216,7 @@ func (h *MarkerHandler) HandleDeleteStory(c *fiber.Ctx) error {
 // @Failure 400 {object} map[string]string "Invalid story ID or request body"
 // @Failure 500 {object} map[string]string "Failed to add reaction"
 // @Router /api/v1/markers/stories/{storyID}/reactions [post]
-func (h *MarkerHandler) HandleAddReaction(c *fiber.Ctx) error {
+func (h *MarkerStoryHandler) HandleAddReaction(c *fiber.Ctx) error {
 	storyIDParam := c.Params("storyID")
 	storyID, err := strconv.Atoi(storyIDParam)
 	if err != nil {
@@ -228,7 +225,6 @@ func (h *MarkerHandler) HandleAddReaction(c *fiber.Ctx) error {
 
 	userID := c.Locals("userID").(int)
 
-	// Parse the request body to get the reaction type
 	var reactionRequest dto.ReactionRequest
 	if err := c.BodyParser(&reactionRequest); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
@@ -238,9 +234,7 @@ func (h *MarkerHandler) HandleAddReaction(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid reaction type"})
 	}
 
-	// Call the service to add the reaction
-	err = h.MarkerFacadeService.StoryService.AddReaction(storyID, userID, reactionRequest.ReactionType)
-	if err != nil {
+	if err := h.MarkerFacadeService.StoryService.AddReaction(storyID, userID, reactionRequest.ReactionType); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to add reaction" + err.Error()})
 	}
 
@@ -261,7 +255,7 @@ func (h *MarkerHandler) HandleAddReaction(c *fiber.Ctx) error {
 // @Failure 400 {object} map[string]string "Invalid story ID"
 // @Failure 500 {object} map[string]string "Failed to remove reaction"
 // @Router /api/v1/markers/stories/{storyID}/reactions [delete]
-func (h *MarkerHandler) HandleRemoveReaction(c *fiber.Ctx) error {
+func (h *MarkerStoryHandler) HandleRemoveReaction(c *fiber.Ctx) error {
 	storyIDParam := c.Params("storyID")
 	storyID, err := strconv.Atoi(storyIDParam)
 	if err != nil {
@@ -270,9 +264,7 @@ func (h *MarkerHandler) HandleRemoveReaction(c *fiber.Ctx) error {
 
 	userID := c.Locals("userID").(int)
 
-	// Call the service to remove the reaction
-	err = h.MarkerFacadeService.StoryService.RemoveReaction(storyID, userID)
-	if err != nil {
+	if err := h.MarkerFacadeService.StoryService.RemoveReaction(storyID, userID); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to remove reaction" + err.Error()})
 	}
 
@@ -296,7 +288,7 @@ func (h *MarkerHandler) HandleRemoveReaction(c *fiber.Ctx) error {
 // @Failure 409 {object} map[string]string "User has already reported this story"
 // @Failure 500 {object} map[string]string "Failed to report story"
 // @Router /api/v1/markers/stories/{storyID}/report [post]
-func (h *MarkerHandler) HandleReportStory(c *fiber.Ctx) error {
+func (h *MarkerStoryHandler) HandleReportStory(c *fiber.Ctx) error {
 	storyIDParam := c.Params("storyID")
 	storyID, err := strconv.Atoi(storyIDParam)
 	if err != nil {
@@ -305,7 +297,6 @@ func (h *MarkerHandler) HandleReportStory(c *fiber.Ctx) error {
 
 	userID := c.Locals("userID").(int)
 
-	// Get reason from request body
 	var reportRequest struct {
 		Reason string `json:"reason"`
 	}
@@ -317,13 +308,10 @@ func (h *MarkerHandler) HandleReportStory(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Reason is too long"})
 	}
 
-	// Call the service to report the story
-	err = h.MarkerFacadeService.StoryService.ReportStory(storyID, userID, reportRequest.Reason)
-	if err != nil {
+	if err := h.MarkerFacadeService.StoryService.ReportStory(storyID, userID, reportRequest.Reason); err != nil {
 		if errors.Is(err, service.ErrStoryNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Story not found"})
 		}
-		// Handle duplicate report error
 		if strings.Contains(err.Error(), "duplicate entry") {
 			return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "You have already reported this story"})
 		}
