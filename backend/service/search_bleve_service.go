@@ -32,9 +32,41 @@ import (
 )
 
 const (
-	Analyzer     = "koCJKEdgeNgram"
-	nearDistance = "2km"
+	Analyzer       = "koCJKEdgeNgram"
+	nearDistance   = "2km"
 	searchCacheTTL = 5 * time.Minute
+
+	searchSummaryTimeout = 2 * time.Second
+)
+
+const (
+	// Photos and MarkerFacilities are aggregated per marker in separate derived tables
+	// before joining, so a marker with N photos and M facilities never yields N*M rows.
+	// The representative photo is the latest upload, COALESCE(ThumbnailURL, PhotoURL); PhotoID breaks ties.
+	getSearchMarkerSummariesQuery = `
+SELECT m.MarkerID,
+       p.ThumbnailURL,
+       COALESCE(p.PhotoCount, 0) AS PhotoCount,
+       COALESCE(f.FacilityCount, 0) AS FacilityCount,
+       COALESCE(f.FacilityTotal, 0) AS FacilityTotal
+FROM Markers m
+LEFT JOIN (
+    SELECT MarkerID,
+           COALESCE(NULLIF(ThumbnailURL, ''), NULLIF(PhotoURL, '')) AS ThumbnailURL,
+           COUNT(*) OVER (PARTITION BY MarkerID) AS PhotoCount,
+           ROW_NUMBER() OVER (PARTITION BY MarkerID ORDER BY UploadedAt DESC, PhotoID DESC) AS rn
+    FROM Photos
+    WHERE MarkerID IN (?)
+) p ON p.MarkerID = m.MarkerID AND p.rn = 1
+LEFT JOIN (
+    SELECT MarkerID,
+           COUNT(DISTINCT CASE WHEN Quantity > 0 THEN FacilityID END) AS FacilityCount,
+           SUM(CASE WHEN Quantity > 0 THEN Quantity ELSE 0 END) AS FacilityTotal
+    FROM MarkerFacilities
+    WHERE MarkerID IN (?)
+    GROUP BY MarkerID
+) f ON f.MarkerID = m.MarkerID
+WHERE m.MarkerID IN (?)`
 )
 
 var (
@@ -124,8 +156,8 @@ type BleveSearchService struct {
 	DB                *sqlx.DB
 	GetAllMarkersStmt *sqlx.Stmt
 
-	searchCache *gocache.Cache[dto.MarkerSearchResponse]
-	searchSF    singleflight.Group
+	searchCache   *gocache.Cache[dto.MarkerSearchResponse]
+	searchSF      singleflight.Group
 	searchVersion uint64
 
 	stationMap map[string]dto.KoreaStation
@@ -150,7 +182,7 @@ func NewBleveSearchService(
 	return &BleveSearchService{Index: index, Shards: shards,
 		searchCache: searchCache, Logger: logger, DB: db,
 		GetAllMarkersStmt: getMarkerStmt, stationMap: stationMap,
-		batchPool: make([]*bleve.Batch, len(shards)),
+		batchPool:     make([]*bleve.Batch, len(shards)),
 		searchVersion: 1,
 	}
 }
@@ -530,6 +562,93 @@ func (s *BleveSearchService) SearchMarkersNearLocation(t string) (dto.MarkerSear
 	response.Markers = extractMarkers(searchResult.Hits)
 
 	return response, nil
+}
+
+// WithMarkerSummaries returns a copy of resp whose markers carry photo/facility
+// summaries for search result cards. Order, address and took are untouched.
+//
+// Summaries are read from the DB on every call instead of being stored in the
+// search cache, so photo/facility changes show up immediately while the cached
+// Bleve result (5 min, invalidated on index changes) stays as is.
+// If the DB lookup fails, the search result is still returned without summaries.
+func (s *BleveSearchService) WithMarkerSummaries(resp dto.MarkerSearchResponse) dto.MarkerSearchResponse {
+	if len(resp.Markers) == 0 {
+		resp.Markers = make([]dto.ZincMarker, 0)
+		return resp
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), searchSummaryTimeout)
+	defer cancel()
+
+	summaries, err := fetchSearchMarkerSummaries(ctx, s.DB, markerIDsOf(resp.Markers))
+	if err != nil {
+		s.Logger.Error("Failed to fetch search marker summaries", zap.Error(err))
+	}
+
+	resp.Markers = applySearchMarkerSummaries(resp.Markers, summaries)
+	return resp
+}
+
+type searchMarkerSummary struct {
+	MarkerID      int     `db:"MarkerID"`
+	ThumbnailURL  *string `db:"ThumbnailURL"`
+	PhotoCount    int     `db:"PhotoCount"`
+	FacilityCount int     `db:"FacilityCount"`
+	FacilityTotal int     `db:"FacilityTotal"`
+}
+
+func fetchSearchMarkerSummaries(ctx context.Context, db *sqlx.DB, ids []int) (map[int]searchMarkerSummary, error) {
+	summaries := make(map[int]searchMarkerSummary, len(ids))
+	if len(ids) == 0 {
+		return summaries, nil
+	}
+
+	query, args, err := sqlx.In(getSearchMarkerSummariesQuery, ids, ids, ids)
+	if err != nil {
+		return summaries, fmt.Errorf("building search summary query: %w", err)
+	}
+
+	// sqlx.In returns queries with the `?` bindvar, must rebind it for our specific database.
+	query = db.Rebind(query)
+
+	var rows []searchMarkerSummary
+	if err := db.SelectContext(ctx, &rows, query, args...); err != nil {
+		return summaries, fmt.Errorf("fetching search summaries: %w", err)
+	}
+
+	for _, row := range rows {
+		summaries[row.MarkerID] = row
+	}
+	return summaries, nil
+}
+
+// markerIDsOf returns the distinct marker IDs in result order.
+func markerIDsOf(markers []dto.ZincMarker) []int {
+	seen := make(map[int]struct{}, len(markers))
+	ids := make([]int, 0, len(markers))
+	for _, m := range markers {
+		if _, ok := seen[m.MarkerID]; ok {
+			continue
+		}
+		seen[m.MarkerID] = struct{}{}
+		ids = append(ids, m.MarkerID)
+	}
+	return ids
+}
+
+// applySearchMarkerSummaries copies markers (the input may be shared with the
+// search cache) and fills in the summary fields, keeping the original order.
+func applySearchMarkerSummaries(markers []dto.ZincMarker, summaries map[int]searchMarkerSummary) []dto.ZincMarker {
+	result := make([]dto.ZincMarker, len(markers))
+	for i, m := range markers {
+		summary := summaries[m.MarkerID] // zero value when the marker is missing from the DB
+		m.ThumbnailURL = summary.ThumbnailURL
+		m.PhotoCount = summary.PhotoCount
+		m.FacilityCount = summary.FacilityCount
+		m.FacilityTotal = summary.FacilityTotal
+		result[i] = m
+	}
+	return result
 }
 
 func (s *BleveSearchService) FlushAllBatches() error {

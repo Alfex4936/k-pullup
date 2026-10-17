@@ -85,7 +85,7 @@ func (h *SearchHandler) HandleSearchMarkerAddress(c *fiber.Ctx) error {
 // @Produce json
 // @Security
 // @Param term query string true "Search term for the marker address"
-// @Success 200 {array} dto.MarkerSearchResponse "List of matching markers"
+// @Success 200 {object} dto.MarkerSearchResponse "List of matching markers with photo/facility summaries"
 // @Failure 400 {object} map[string]string "Search term is required"
 // @Failure 500 {object} map[string]string "Failed to execute search"
 // @Router /api/v1/search/marker [get]
@@ -106,7 +106,7 @@ func (h *SearchHandler) HandleBleveSearchMarkerAddress(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.Status(fiber.StatusOK).JSON(response)
+	return c.Status(fiber.StatusOK).JSON(h.BleveSearchService.WithMarkerSummaries(response))
 }
 
 // HandleAutoComplete provides autocomplete suggestions for marker addresses.
@@ -178,7 +178,7 @@ func (h *SearchHandler) HandleGeoSearchByStation(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.Status(fiber.StatusOK).JSON(response)
+	return c.Status(fiber.StatusOK).JSON(h.BleveSearchService.WithMarkerSummaries(response))
 }
 
 // Handler for searching marker addresses

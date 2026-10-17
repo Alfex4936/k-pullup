@@ -44,6 +44,12 @@ type ZincMarker struct {
 	Address   string `json:"address"`
 	Highlight string `json:"highlight,omitempty"`
 	MarkerID  int    `json:"markerId"`
+
+	// Search result card summary (filled from DB after the index search, not stored in the index)
+	ThumbnailURL  *string `json:"thumbnailUrl"` // null when the marker has no photo
+	PhotoCount    int     `json:"photoCount"`
+	FacilityCount int     `json:"facilityCount"` // facility kinds with quantity >= 1
+	FacilityTotal int     `json:"facilityTotal"` // sum of all facility quantities
 }
 
 // FuzzSearch represents the structure of the search
