@@ -1,12 +1,14 @@
 # chulbong- :kr:
 <p align="center">
   <img width="100" src="https://github.com/Alfex4936/chulbong-kr/assets/2356749/6236863a-11e1-45d5-b2e2-9bcf40363e1d" alt="k-pullup logo"/></br>
-  <img width="1024" alt="2025-10-08 pullupbars" src="https://github.com/user-attachments/assets/0eec5b32-553b-4741-a76e-0712e5bb08f3" />
+  <a href="docs/statistics/README.md"><img width="1200" alt="전국 철봉 등록 현황: 전체 장소 수와 시·도, 시·군, 구별 분포. 매주 자동 업데이트됩니다." src="docs/statistics/coverage.svg" /></a>
   <img alt="GitHub commit activity (branch)" src="https://img.shields.io/github/commit-activity/w/Alfex4936/chulbong-kr/main">
   <img alt="Go)" src="https://img.shields.io/badge/Go-1.2x-lightblue">
   <img alt="MySQL" src="https://img.shields.io/badge/MySQL-8.x-brightgreen">
   <img alt="Redis" src="https://img.shields.io/badge/Dragonfly-1.x-red">
 </p>
+
+<p align="center"><a href="docs/statistics/summary.json">집계 데이터</a> · <a href="docs/statistics/README.md">집계 기준</a> · 매주 월요일 오전 9:17 (한국 시간) 자동 업데이트</p>
 
 > [!NOTE]  
 > The service is running with [Go as backend](https://github.com/Alfex4936/chulbong-kr/tree/main/backend) but [Spring boot 3](https://github.com/Alfex4936/chulbong-kr/tree/main/backend-spring) is also available. (WIP)

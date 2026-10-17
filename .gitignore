@@ -10,3 +10,5 @@ frontend/yarn.lock
 __pycache__
 chulbong-geopandas/
 *.png
+!docs/statistics/coverage.png
+!docs/statistics/summary.json
