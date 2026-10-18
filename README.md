@@ -14,7 +14,8 @@
 > The service is running with [Go as backend](https://github.com/Alfex4936/chulbong-kr/tree/main/backend) but [Spring boot 3](https://github.com/Alfex4936/chulbong-kr/tree/main/backend-spring) is also available. (WIP)
 
 <p align="center">
-  <img width="356" src="https://github.com/user-attachments/assets/78072f29-59f5-4303-b241-533b9198b18d" alt="gochulbong"/></br>
+  <img width="600" height="600" alt="image" src="https://github.com/user-attachments/assets/50cda1b0-d788-4079-9a7f-1e0196426a9f" />
+
 </p>
 
 ### 프로젝트 소개 :world_map:
