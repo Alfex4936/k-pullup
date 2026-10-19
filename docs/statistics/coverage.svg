@@ -77,8 +77,8 @@ z
    </g>
    <g id="patch_6">
     <path d="M 205.056 332.10252
-L 338.129463 332.10252
-L 338.129463 346.02948
+L 338.549253 332.10252
+L 338.549253 346.02948
 L 205.056 346.02948
 z
 " clip-path="url(#p3e7061be5c)" style="fill: #15805e"/>
@@ -950,7 +950,7 @@ z
     </g>
    </g>
    <g id="text_4">
-    <!-- 951   19.4% -->
+    <!-- 954   19.5% -->
     <g style="fill: #182c27" transform="translate(463.061469 342.124516) scale(0.11 -0.11)">
      <defs>
       <path id="NanumGothic-39" d="M 2995 2925
@@ -1018,14 +1018,14 @@ z
      </defs>
      <use xlink:href="#NanumGothic-39"/>
      <use xlink:href="#NanumGothic-35" x="60.599991"/>
-     <use xlink:href="#NanumGothic-31" x="121.199982"/>
+     <use xlink:href="#NanumGothic-34" x="121.199982"/>
      <use xlink:href="#NanumGothic-20" x="181.799973"/>
      <use xlink:href="#NanumGothic-20" x="209.799957"/>
      <use xlink:href="#NanumGothic-20" x="237.799942"/>
      <use xlink:href="#NanumGothic-31" x="265.799927"/>
      <use xlink:href="#NanumGothic-39" x="326.399918"/>
      <use xlink:href="#NanumGothic-2e" x="386.999908"/>
-     <use xlink:href="#NanumGothic-34" x="417.299896"/>
+     <use xlink:href="#NanumGothic-35" x="417.299896"/>
      <use xlink:href="#NanumGothic-25" x="477.899887"/>
     </g>
    </g>
@@ -6485,7 +6485,7 @@ z
    </g>
   </g>
   <g id="text_77">
-   <!-- 2026-10-17 KST -->
+   <!-- 2026-10-19 KST -->
    <g style="fill: #64766f" transform="translate(1016.731875 46.368) scale(0.11 -0.11)">
     <use xlink:href="#NanumGothic-32"/>
     <use xlink:href="#NanumGothic-30" x="60.599991"/>
@@ -6496,7 +6496,7 @@ z
     <use xlink:href="#NanumGothic-30" x="339.299942"/>
     <use xlink:href="#NanumGothic-2d" x="399.899933"/>
     <use xlink:href="#NanumGothic-31" x="436.199921"/>
-    <use xlink:href="#NanumGothic-37" x="496.799911"/>
+    <use xlink:href="#NanumGothic-39" x="496.799911"/>
     <use xlink:href="#NanumGothic-20" x="557.399902"/>
     <use xlink:href="#NanumGothic-4b" x="585.399887"/>
     <use xlink:href="#NanumGothic-53" x="649.499878"/>
@@ -7081,13 +7081,13 @@ z
    </g>
   </g>
   <g id="text_79">
-   <!-- 4,892 -->
+   <!-- 4,894 -->
    <g style="fill: #182c27" transform="translate(51.84 158.976) scale(0.34 -0.34)">
     <use xlink:href="#NanumGothic-34"/>
     <use xlink:href="#NanumGothic-2c" x="60.599991"/>
     <use xlink:href="#NanumGothic-38" x="90.899979"/>
     <use xlink:href="#NanumGothic-39" x="151.499969"/>
-    <use xlink:href="#NanumGothic-32" x="212.09996"/>
+    <use xlink:href="#NanumGothic-34" x="212.09996"/>
    </g>
   </g>
   <g id="text_80">
@@ -7774,13 +7774,13 @@ z
    </g>
   </g>
   <g id="text_83">
-   <!-- 99.96% -->
+   <!-- 99.98% -->
    <g style="fill: #182c27" transform="translate(783.36 158.976) scale(0.34 -0.34)">
     <use xlink:href="#NanumGothic-39"/>
     <use xlink:href="#NanumGothic-39" x="60.599991"/>
     <use xlink:href="#NanumGothic-2e" x="121.199982"/>
     <use xlink:href="#NanumGothic-39" x="151.499969"/>
-    <use xlink:href="#NanumGothic-36" x="212.09996"/>
+    <use xlink:href="#NanumGothic-38" x="212.09996"/>
     <use xlink:href="#NanumGothic-25" x="272.699951"/>
    </g>
   </g>
@@ -9449,7 +9449,7 @@ z
    </g>
   </g>
   <g id="text_92">
-   <!-- 주소 미분류 2곳도 전체에 포함합니다.  |  출처: k-pullup 공개 API -->
+   <!-- 주소 미분류 1곳도 전체에 포함합니다.  |  출처: k-pullup 공개 API -->
    <g style="fill: #64766f" transform="translate(51.84 791.568) scale(0.1 -0.1)">
     <defs>
      <path id="NanumGothic-bbf8" d="M 5152 -806
@@ -10278,7 +10278,7 @@ z
     <use xlink:href="#NanumGothic-bd84" x="309.999939"/>
     <use xlink:href="#NanumGothic-b958" x="403.999924"/>
     <use xlink:href="#NanumGothic-20" x="497.999908"/>
-    <use xlink:href="#NanumGothic-32" x="525.999893"/>
+    <use xlink:href="#NanumGothic-31" x="525.999893"/>
     <use xlink:href="#NanumGothic-acf3" x="586.599884"/>
     <use xlink:href="#NanumGothic-b3c4" x="680.599869"/>
     <use xlink:href="#NanumGothic-20" x="774.599854"/>
