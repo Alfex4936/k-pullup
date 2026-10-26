@@ -77,8 +77,8 @@ z
    </g>
    <g id="patch_6">
     <path d="M 205.056 332.10252
-L 338.549253 332.10252
-L 338.549253 346.02948
+L 338.689183 332.10252
+L 338.689183 346.02948
 L 205.056 346.02948
 z
 " clip-path="url(#p3e7061be5c)" style="fill: #15805e"/>
@@ -950,7 +950,7 @@ z
     </g>
    </g>
    <g id="text_4">
-    <!-- 954   19.5% -->
+    <!-- 955   19.5% -->
     <g style="fill: #182c27" transform="translate(463.061469 342.124516) scale(0.11 -0.11)">
      <defs>
       <path id="NanumGothic-39" d="M 2995 2925
@@ -1018,7 +1018,7 @@ z
      </defs>
      <use xlink:href="#NanumGothic-39"/>
      <use xlink:href="#NanumGothic-35" x="60.599991"/>
-     <use xlink:href="#NanumGothic-34" x="121.199982"/>
+     <use xlink:href="#NanumGothic-35" x="121.199982"/>
      <use xlink:href="#NanumGothic-20" x="181.799973"/>
      <use xlink:href="#NanumGothic-20" x="209.799957"/>
      <use xlink:href="#NanumGothic-20" x="237.799942"/>
@@ -4311,8 +4311,8 @@ z
    </g>
    <g id="patch_38">
     <path d="M 846.72 656.527824
-L 932.873846 656.527824
-L 932.873846 664.297776
+L 934.241368 656.527824
+L 934.241368 664.297776
 L 846.72 664.297776
 z
 " clip-path="url(#p30734e9e1f)" style="fill: #c5d8d0"/>
@@ -4842,8 +4842,100 @@ z
     </g>
    </g>
    <g id="text_65">
-    <!-- 서울 송파구 -->
+    <!-- 서울 서초구 -->
     <g style="fill: #182c27" transform="translate(786.084 647.791241) scale(0.094 -0.094)">
+     <defs>
+      <path id="NanumGothic-cd08" d="M 4512 3315
+Q 4346 3130 4080 2941
+Q 3814 2752 3475 2566
+Q 3680 2496 3923 2419
+Q 4166 2342 4409 2275
+Q 4653 2208 4880 2153
+Q 5107 2099 5286 2067
+Q 5338 2054 5347 2035
+Q 5357 2016 5344 1971
+L 5286 1754
+Q 5274 1683 5184 1702
+Q 5005 1734 4736 1801
+Q 4467 1869 4163 1955
+Q 3859 2042 3548 2134
+Q 3238 2227 2982 2317
+Q 2490 2093 1946 1913
+Q 1402 1734 851 1626
+Q 755 1606 730 1670
+L 653 1888
+Q 640 1920 659 1949
+Q 678 1978 717 1990
+Q 1709 2202 2521 2557
+Q 3334 2912 3974 3392
+Q 4077 3469 4070 3523
+Q 4064 3578 3962 3578
+L 1190 3578
+Q 1107 3578 1107 3661
+L 1107 3885
+Q 1107 3962 1190 3962
+L 4147 3962
+Q 5101 3962 4512 3315
+z
+M 3123 1664
+Q 3155 1664 3180 1635
+Q 3206 1606 3206 1568
+L 3206 499
+L 5728 499
+Q 5760 499 5792 476
+Q 5824 454 5824 416
+L 5824 198
+Q 5824 166 5792 140
+Q 5760 115 5728 115
+L 288 115
+Q 250 115 221 140
+Q 192 166 192 198
+L 192 416
+Q 192 454 221 476
+Q 250 499 288 499
+L 2765 499
+L 2765 1568
+Q 2765 1606 2787 1635
+Q 2810 1664 2848 1664
+L 3123 1664
+z
+M 3814 4877
+Q 3910 4877 3910 4787
+L 3910 4582
+Q 3910 4486 3814 4486
+L 2093 4486
+Q 1997 4486 1997 4582
+L 1997 4787
+Q 1997 4877 2093 4877
+L 3814 4877
+z
+" transform="scale(0.015625)"/>
+     </defs>
+     <use xlink:href="#NanumGothic-c11c"/>
+     <use xlink:href="#NanumGothic-c6b8" x="93.999985"/>
+     <use xlink:href="#NanumGothic-20" x="187.999969"/>
+     <use xlink:href="#NanumGothic-c11c" x="215.999954"/>
+     <use xlink:href="#NanumGothic-cd08" x="309.999939"/>
+     <use xlink:href="#NanumGothic-ad6c" x="403.999924"/>
+    </g>
+   </g>
+   <g id="text_66">
+    <!-- 64   1.3% -->
+    <g style="fill: #182c27" transform="translate(1038.641172 647.819045) scale(0.095 -0.095)">
+     <use xlink:href="#NanumGothic-36"/>
+     <use xlink:href="#NanumGothic-34" x="60.599991"/>
+     <use xlink:href="#NanumGothic-20" x="121.199982"/>
+     <use xlink:href="#NanumGothic-20" x="149.199966"/>
+     <use xlink:href="#NanumGothic-20" x="177.199951"/>
+     <use xlink:href="#NanumGothic-31" x="205.199936"/>
+     <use xlink:href="#NanumGothic-2e" x="265.799927"/>
+     <use xlink:href="#NanumGothic-33" x="296.099915"/>
+     <use xlink:href="#NanumGothic-25" x="356.699905"/>
+    </g>
+   </g>
+   <g id="text_67">
+    <!-- 서울 송파구 -->
+    <g style="fill: #182c27" transform="translate(786.084 663.026441) scale(0.094 -0.094)">
      <defs>
       <path id="NanumGothic-c1a1" d="M 4992 109
 Q 4992 -218 4787 -422
@@ -5007,103 +5099,11 @@ z
      <use xlink:href="#NanumGothic-ad6c" x="403.999924"/>
     </g>
    </g>
-   <g id="text_66">
-    <!-- 64   1.3% -->
-    <g style="fill: #182c27" transform="translate(1038.641172 647.819045) scale(0.095 -0.095)">
-     <use xlink:href="#NanumGothic-36"/>
-     <use xlink:href="#NanumGothic-34" x="60.599991"/>
-     <use xlink:href="#NanumGothic-20" x="121.199982"/>
-     <use xlink:href="#NanumGothic-20" x="149.199966"/>
-     <use xlink:href="#NanumGothic-20" x="177.199951"/>
-     <use xlink:href="#NanumGothic-31" x="205.199936"/>
-     <use xlink:href="#NanumGothic-2e" x="265.799927"/>
-     <use xlink:href="#NanumGothic-33" x="296.099915"/>
-     <use xlink:href="#NanumGothic-25" x="356.699905"/>
-    </g>
-   </g>
-   <g id="text_67">
-    <!-- 서울 서초구 -->
-    <g style="fill: #182c27" transform="translate(786.084 663.026441) scale(0.094 -0.094)">
-     <defs>
-      <path id="NanumGothic-cd08" d="M 4512 3315
-Q 4346 3130 4080 2941
-Q 3814 2752 3475 2566
-Q 3680 2496 3923 2419
-Q 4166 2342 4409 2275
-Q 4653 2208 4880 2153
-Q 5107 2099 5286 2067
-Q 5338 2054 5347 2035
-Q 5357 2016 5344 1971
-L 5286 1754
-Q 5274 1683 5184 1702
-Q 5005 1734 4736 1801
-Q 4467 1869 4163 1955
-Q 3859 2042 3548 2134
-Q 3238 2227 2982 2317
-Q 2490 2093 1946 1913
-Q 1402 1734 851 1626
-Q 755 1606 730 1670
-L 653 1888
-Q 640 1920 659 1949
-Q 678 1978 717 1990
-Q 1709 2202 2521 2557
-Q 3334 2912 3974 3392
-Q 4077 3469 4070 3523
-Q 4064 3578 3962 3578
-L 1190 3578
-Q 1107 3578 1107 3661
-L 1107 3885
-Q 1107 3962 1190 3962
-L 4147 3962
-Q 5101 3962 4512 3315
-z
-M 3123 1664
-Q 3155 1664 3180 1635
-Q 3206 1606 3206 1568
-L 3206 499
-L 5728 499
-Q 5760 499 5792 476
-Q 5824 454 5824 416
-L 5824 198
-Q 5824 166 5792 140
-Q 5760 115 5728 115
-L 288 115
-Q 250 115 221 140
-Q 192 166 192 198
-L 192 416
-Q 192 454 221 476
-Q 250 499 288 499
-L 2765 499
-L 2765 1568
-Q 2765 1606 2787 1635
-Q 2810 1664 2848 1664
-L 3123 1664
-z
-M 3814 4877
-Q 3910 4877 3910 4787
-L 3910 4582
-Q 3910 4486 3814 4486
-L 2093 4486
-Q 1997 4486 1997 4582
-L 1997 4787
-Q 1997 4877 2093 4877
-L 3814 4877
-z
-" transform="scale(0.015625)"/>
-     </defs>
-     <use xlink:href="#NanumGothic-c11c"/>
-     <use xlink:href="#NanumGothic-c6b8" x="93.999985"/>
-     <use xlink:href="#NanumGothic-20" x="187.999969"/>
-     <use xlink:href="#NanumGothic-c11c" x="215.999954"/>
-     <use xlink:href="#NanumGothic-cd08" x="309.999939"/>
-     <use xlink:href="#NanumGothic-ad6c" x="403.999924"/>
-    </g>
-   </g>
    <g id="text_68">
-    <!-- 63   1.3% -->
+    <!-- 64   1.3% -->
     <g style="fill: #182c27" transform="translate(1038.641172 663.054245) scale(0.095 -0.095)">
      <use xlink:href="#NanumGothic-36"/>
-     <use xlink:href="#NanumGothic-33" x="60.599991"/>
+     <use xlink:href="#NanumGothic-34" x="60.599991"/>
      <use xlink:href="#NanumGothic-20" x="121.199982"/>
      <use xlink:href="#NanumGothic-20" x="149.199966"/>
      <use xlink:href="#NanumGothic-20" x="177.199951"/>
@@ -6485,7 +6485,7 @@ z
    </g>
   </g>
   <g id="text_77">
-   <!-- 2026-10-19 KST -->
+   <!-- 2026-10-26 KST -->
    <g style="fill: #64766f" transform="translate(1016.731875 46.368) scale(0.11 -0.11)">
     <use xlink:href="#NanumGothic-32"/>
     <use xlink:href="#NanumGothic-30" x="60.599991"/>
@@ -6495,8 +6495,8 @@ z
     <use xlink:href="#NanumGothic-31" x="278.699951"/>
     <use xlink:href="#NanumGothic-30" x="339.299942"/>
     <use xlink:href="#NanumGothic-2d" x="399.899933"/>
-    <use xlink:href="#NanumGothic-31" x="436.199921"/>
-    <use xlink:href="#NanumGothic-39" x="496.799911"/>
+    <use xlink:href="#NanumGothic-32" x="436.199921"/>
+    <use xlink:href="#NanumGothic-36" x="496.799911"/>
     <use xlink:href="#NanumGothic-20" x="557.399902"/>
     <use xlink:href="#NanumGothic-4b" x="585.399887"/>
     <use xlink:href="#NanumGothic-53" x="649.499878"/>
@@ -7081,13 +7081,13 @@ z
    </g>
   </g>
   <g id="text_79">
-   <!-- 4,894 -->
+   <!-- 4,895 -->
    <g style="fill: #182c27" transform="translate(51.84 158.976) scale(0.34 -0.34)">
     <use xlink:href="#NanumGothic-34"/>
     <use xlink:href="#NanumGothic-2c" x="60.599991"/>
     <use xlink:href="#NanumGothic-38" x="90.899979"/>
     <use xlink:href="#NanumGothic-39" x="151.499969"/>
-    <use xlink:href="#NanumGothic-34" x="212.09996"/>
+    <use xlink:href="#NanumGothic-35" x="212.09996"/>
    </g>
   </g>
   <g id="text_80">
